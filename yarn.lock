@@ -2,27 +2,6 @@
 # yarn lockfile v1
 
 
-"@girs/adw-1@^1.3.3-3.1.0":
-  version "1.3.3-3.2.0"
-  resolved "https://registry.yarnpkg.com/@girs/adw-1/-/adw-1-1.3.3-3.2.0.tgz#16af714abe20f894bdb2ce9f66f0c73f6ab3a2d3"
-  integrity sha512-7B3ljhxXFqey0A4LmvtkXfrhErPZYM42FvoOoQxhujKCZt2xVZM6y4UOdbrLEAJA+7LRqbfqg8xqtlbQPUV5Ug==
-  dependencies:
-    "@girs/cairo-1.0" "^1.0.0-3.2.0"
-    "@girs/freetype2-2.0" "^2.0.0-3.2.0"
-    "@girs/gdk-4.0" "^4.0.0-3.2.0"
-    "@girs/gdkpixbuf-2.0" "^2.0.0-3.2.0"
-    "@girs/gio-2.0" "^2.76.1-3.2.0"
-    "@girs/gjs" "^3.2.0"
-    "@girs/glib-2.0" "^2.76.1-3.2.0"
-    "@girs/gmodule-2.0" "^2.0.0-3.2.0"
-    "@girs/gobject-2.0" "^2.76.1-3.2.0"
-    "@girs/graphene-1.0" "^1.0.0-3.2.0"
-    "@girs/gsk-4.0" "^4.0.0-3.2.0"
-    "@girs/gtk-4.0" "^4.10.4-3.2.0"
-    "@girs/harfbuzz-0.0" "^7.1.0-3.2.0"
-    "@girs/pango-1.0" "^1.50.14-3.2.0"
-    "@girs/pangocairo-1.0" "^1.0.0-3.2.0"
-
 "@girs/cairo-1.0@^1.0.0-3.2.0":
   version "1.0.0-3.2.0"
   resolved "https://registry.yarnpkg.com/@girs/cairo-1.0/-/cairo-1.0-1.0.0-3.2.0.tgz#1020a5f43f085278b2a636b68586c698b7966a3b"
@@ -137,7 +116,7 @@
     "@girs/pango-1.0" "^1.50.14-3.2.0"
     "@girs/pangocairo-1.0" "^1.0.0-3.2.0"
 
-"@girs/gtk-4.0@^4.10.4-3.1.0", "@girs/gtk-4.0@^4.10.4-3.2.0":
+"@girs/gtk-4.0@^4.10.4-3.1.0":
   version "4.10.4-3.2.0"
   resolved "https://registry.yarnpkg.com/@girs/gtk-4.0/-/gtk-4.0-4.10.4-3.2.0.tgz#70af5a673d6cf4c2a8a2722e0225910da7a199c7"
   integrity sha512-/KB4LIQ9+Y+hWD/ZEqOdBelwp66dN9jTJumoyg4UQVQIq3h/c0oX/+ul3McEnpqNqq67GF5Em6/YXkBPZWIpQQ==
