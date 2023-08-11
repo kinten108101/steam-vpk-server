@@ -45,6 +45,7 @@ yarn_deps = custom_target(
   output: [ 'yarn-deps-out' ],
 )
 
+subdir('data')
 subdir('src')
 
 gnome.post_install(

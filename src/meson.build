@@ -1,5 +1,3 @@
-subdir('assets')
-
 exec_config = configuration_data()
 exec_config.set('APP_ID', 'com.github.kinten108101.SteamVPK.Server')
 exec_config.set('GJS', gjs_console)
