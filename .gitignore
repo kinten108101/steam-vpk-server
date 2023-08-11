@@ -1,0 +1,17 @@
+# Nodejs
+/node_modules
+
+# Build artifacts
+/build
+/_build
+/build-flatpak
+/build-meson
+/.flatpak-builder
+
+# TypeScript definitions generated from GIR files
+/@types
+/gi-types
+
+# yarn
+/yarn-error.log
+
