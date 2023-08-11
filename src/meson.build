@@ -26,14 +26,11 @@ script = [
   'loadorder-resolver.ts',
   'logger.ts',
   'main.ts',
-  'meson.build',
   'server.ts',
-  'session.ts',
   'settings.ts',
   'simple-inv.ts',
   'steam-api.ts',
   'utils.ts',
-  'vdf.ts',
 ]
 script_files = files(script)
 
