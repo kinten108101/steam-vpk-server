@@ -1,14 +1,8 @@
 {
   "type": "module",
   "scripts": {
-    "meson:build:prod": "rm -rf build-meson && meson setup --reconfigure build-meson && sudo meson install -C build-meson",
-    "meson:install": "rm -rf build-meson && meson setup --reconfigure build-meson -Dbuildtype=debug && sudo meson install -C build-meson && yarn run meson:run",
-    "meson:install:prod": "rm -rf build-meson && meson setup --reconfigure build-meson && sudo meson install -C build-meson && yarn run meson:run:prod",
-    "meson:run": "com.github.kinten108101.SteamVPK.Dev",
-    "meson:run:prod": "com.github.kinten108101.SteamVPK",
-    "flatpak:install": "flatpak run org.flatpak.Builder --force-clean --user --install build-flatpak build-aux/com.github.kinten108101.SteamVpk.Dev.yml --disable-updates && yarn run flatpak:run",
-    "flatpak:run": "flatpak run com.github.kinten108101.SteamVpk.Dev",
-    "typecheck": "tsc"
+    "meson:install": "rm -rf build-meson && meson setup --reconfigure build-meson && sudo meson install -C build-meson",
+    "meson:run": "com.github.kinten108101.SteamVPK.Server"
   },
   "dependencies": {
     "@girs/gtk-4.0": "^4.10.4-3.1.0",
