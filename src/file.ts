@@ -73,8 +73,8 @@ export function make_dir_nonstrict(dir: Gio.File) {
     dir.make_directory(null);
   } catch (error) {
     if (error instanceof GLib.Error) {
-      if (error.matches(Gio.io_error_quark(), Gio.IOErrorEnum.EXISTS)) {
-      }
+      if (error.matches(Gio.io_error_quark(), Gio.IOErrorEnum.EXISTS)) {}
+      else throw error;
     } else throw error;
   }
 }
