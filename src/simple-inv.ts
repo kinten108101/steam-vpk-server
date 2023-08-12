@@ -3,7 +3,7 @@ import GLib from 'gi://GLib';
 const Signals = imports.signals;
 import type { SignalMethods } from '@girs/gjs';
 
-import * as Utils from './utils.js';
+import * as Utils from './steam-vpk-utils/utils.js';
 import * as Files from './file.js';
 import Inventory, { InventoryItem, InventoryMethods } from './inventory.js';
 

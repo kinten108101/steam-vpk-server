@@ -26,7 +26,7 @@ import {
   array_insert,
   log_error,
   registerClass,
-} from './utils.js';
+} from './steam-vpk-utils/utils.js';
 
 interface ConfigurationFile {
   addonlist?: ConfigurationFileEntry[];

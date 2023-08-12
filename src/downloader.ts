@@ -3,7 +3,7 @@ import Gio from 'gi://Gio';
 import GObject from 'gi://GObject';
 import Soup from 'gi://Soup';
 
-import * as Utils from './utils.js';
+import * as Utils from './steam-vpk-utils/utils.js';
 import * as Files from './file.js';
 import * as Const from './const.js';
 

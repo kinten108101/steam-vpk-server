@@ -2,7 +2,7 @@ import GObject from 'gi://GObject';
 import Gtk from 'gi://Gtk';
 import Gio from 'gi://Gio';
 import { GSETTINGS_ID } from './const.js';
-import { g_param_default, registerClass } from './utils.js';
+import { g_param_default, registerClass } from './steam-vpk-utils/utils.js';
 
 Gio._promisify(Gtk.FileDialog.prototype, 'select_folder', 'select_folder_finish');
 

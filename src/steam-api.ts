@@ -1,7 +1,7 @@
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import Soup from 'gi://Soup';
-import { isNumberString } from './utils.js';
+import { isNumberString } from './steam-vpk-utils/utils.js';
 import { DefaultEncoder, read_json_bytes } from './file.js';
 import { OAUTH } from './const.js';
 import { generateAuthor } from './id.js';

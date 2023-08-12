@@ -6,7 +6,7 @@ import { Addon, AddonManifest } from './addons.js';
 import Downloader from './downloader.js';
 import AddonStorage from './addon-storage.js';
 import SteamworkServices from './steam-api.js';
-import { g_model_foreach, log_error, promise_wrap, registerClass } from './utils.js';
+import { g_model_foreach, log_error, promise_wrap, registerClass } from './steam-vpk-utils/utils.js';
 
 export interface ArchiveManifest {
   path?: string;

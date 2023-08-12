@@ -3,7 +3,7 @@ import GObject from 'gi://GObject';
 
 import { ArchiveGroup, ArchiveManifest } from './archiver.js';
 import { ADDON_INFO } from './const.js';
-import { registerClass } from './utils.js';
+import { registerClass } from './steam-vpk-utils/utils.js';
 
 export interface StorageExport {
   addondetails: {

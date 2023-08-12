@@ -9,7 +9,7 @@ gnome = import('gnome')
 fs = import('fs')
 
 server_id = 'com.github.kinten108101.SteamVPK.Server'
-datadir = get_option('datadir')
+datadir = get_option('prefix') / get_option('datadir')
 server_pkgdatadir = datadir / server_id
 
 yarn = find_program('yarn', version: '>=1.22.19', required: true)

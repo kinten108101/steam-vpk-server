@@ -3,7 +3,7 @@ import Gio from 'gi://Gio';
 const Signals = imports.signals;
 import type { SignalMethods } from '@girs/gjs';
 import * as File from './file.js';
-import * as Utils from './utils.js';
+import * as Utils from './steam-vpk-utils/utils.js';
 
 export class Subdir {
   id: string;

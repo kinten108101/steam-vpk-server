@@ -1,7 +1,7 @@
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import AddonStorage from './addon-storage.js';
-import { g_model_foreach, log_error } from './utils.js';
+import { g_model_foreach, log_error } from './steam-vpk-utils/utils.js';
 import { Archive } from './archiver.js';
 import { list_file_async } from './file.js';
 import type { SignalMethods } from '@girs/gjs';

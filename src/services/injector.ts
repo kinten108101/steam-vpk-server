@@ -5,7 +5,7 @@ import Gdk from 'gi://Gdk';
 
 import Injector, { InjectionStore } from '../injector.js';
 import { SERVER_ID } from '../const.js';
-import { promise_wrap } from '../utils.js';
+import { promise_wrap } from '../steam-vpk-utils/utils.js';
 
 export default function InjectorService(
 { injector,

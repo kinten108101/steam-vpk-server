@@ -11,6 +11,9 @@ script = [
   'services/addons.ts',
   'services/injector.ts',
   'services/service.ts',
+  'steam-vpk-utils/dbus-utils.ts',
+  'steam-vpk-utils/portals.ts',
+  'steam-vpk-utils/utils.ts',
   'add-addon.ts',
   'addon-storage.ts',
   'addons.ts',
@@ -30,7 +33,6 @@ script = [
   'settings.ts',
   'simple-inv.ts',
   'steam-api.ts',
-  'utils.ts',
 ]
 script_files = files(script)
 

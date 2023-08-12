@@ -1,7 +1,7 @@
 import Gio from 'gi://Gio';
 import Gtk from 'gi://Gtk';
 import { Configuration, Separator } from './addon-storage.js';
-import { registerClass } from './utils.js';
+import { registerClass } from './steam-vpk-utils/utils.js';
 
 export class Profile {
   id: string;
