@@ -101,6 +101,11 @@ export default function Server() {
     Gio.BusNameOwnerFlags.NONE,
     null,
     (connection: Gio.DBusConnection) => {
+      BackgroundPortal({
+        connection,
+      }).request_background()
+        .set_status('Powering Steam VPK Applications')
+        .close();
       InjectorService({
         injector: injector,
         injection_store: injection_store,
