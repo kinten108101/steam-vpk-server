@@ -2,7 +2,9 @@
   "type": "module",
   "scripts": {
     "meson:install": "rm -rf build-meson && meson setup --reconfigure build-meson && sudo meson install -C build-meson",
-    "meson:run": "com.github.kinten108101.SteamVPK.Server"
+    "meson:run": "com.github.kinten108101.SteamVPK.Server",
+    "flatpak:install": "rm -rf build-flatpak && flatpak run org.flatpak.Builder --force-clean --user --install build build-aux/com.github.kinten108101.SteamVPK.Server.yml",
+    "flatpak:run": "flatpak run com.github.kinten108101.SteamVPK.Server"
   },
   "dependencies": {
     "@girs/gtk-4.0": "^4.10.4-3.1.0",
