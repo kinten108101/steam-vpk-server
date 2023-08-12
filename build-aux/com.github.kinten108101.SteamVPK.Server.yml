@@ -40,7 +40,6 @@ modules:
     buildsystem: meson
     config-opts:
       - -Doffline-mirror=/app/yarn-mirror
-      - -Dbuildtype=debug
     sources:
       - type: dir
         path: ../
