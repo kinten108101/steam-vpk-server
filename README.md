@@ -1,3 +1,7 @@
-Backend for Steam VPK, an add-on manager for the game Left 4 Dead 2 built in TypeScript using GTK4.  
+<img style="vertical-align: left;" src="/data/AddonBox-hicolor.svg" alt="Server logo" width="120" height="120" align="left" />
+<div align="left">
+<br />
+Add-on Box, codename steam-vpk-server, is a backend shared by Steam VPK clients.
 
-https://github.com/kinten108101/steam-vpk
+Add-on Box is used by [Steam VPK](https://github.com/kinten108101/steam-vpk).
+
