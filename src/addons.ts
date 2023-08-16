@@ -19,7 +19,7 @@ export interface StorageExport {
 export interface AddonManifest {
   stvpkid?: string,
   publishedfileid?: string,
-  time_updated?: Number,
+  time_updated?: number,
   title?: string,
   description?: string,
   tags?: { tag: string }[],
