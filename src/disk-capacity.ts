@@ -22,6 +22,7 @@ export default class DiskCapacity extends GObject.Object {
   used: number | undefined;
   allocated!: number;
   settings!: Gio.Settings;
+  cache: WeakMap<Gio.File, number> = new WeakMap;
 
   bind(
   {
@@ -39,11 +40,7 @@ export default class DiskCapacity extends GObject.Object {
     };
     addon_storage.connect(AddonStorage.Signals.addons_changed, updateUsed);
     updateUsed();
-
     settings.bind('allocated', this, 'allocated', Gio.SettingsBindFlags.DEFAULT);
-    settings.connect('changed', <Gio.Settings.ChangedSignalCallback>((_settings, key) => {
-      if (key === 'allocated') console.log('hiiii');
-    }));
   }
 
   async start() {
@@ -62,6 +59,8 @@ export default class DiskCapacity extends GObject.Object {
   }
 
   eval_addon_dir(dir: Gio.File) {
+    // TODO(kinten): Memoize using last modified?
+    this.cache = new WeakMap;
     const subdirs = Files.list_file(dir);
     this.used = subdirs.map(subdir => {
       return this.eval_size(subdir);
@@ -69,6 +68,8 @@ export default class DiskCapacity extends GObject.Object {
   }
 
   eval_size(subdir: Gio.File): number {
+    const cache = this.cache.get(subdir);
+    if (cache !== undefined) return cache;
     const files = Files.list_file(subdir);
     const size = files.map(file => {
       const info = file.query_info(Gio.FILE_ATTRIBUTE_STANDARD_SIZE, Gio.FileQueryInfoFlags.NONE, null);
