@@ -95,6 +95,8 @@ export default function Server() {
     x.start().catch(error => logError(error));
   });
 
+  const loop = new GLib.MainLoop(null, false);
+
   Gio.bus_own_name(
     Gio.BusType.SESSION,
     SERVER_ID,
@@ -115,13 +117,13 @@ export default function Server() {
       }).export2dbus(connection, SERVER_PATH);
     },
     () => {
-    console.log('name lost');
+    console.log('Name lost');
+    loop.quit();
     },
   );
 
   function run(argv: string[] | null): number {
-    console.log('args:', argv);
-    const loop = new GLib.MainLoop(null, false);
+    console.log('program args:', argv?.shift());
     loop.run();
     return 0;
   }
