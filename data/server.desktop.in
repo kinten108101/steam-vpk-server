@@ -4,7 +4,6 @@ Name=Add-on Box
 Exec=@SERVER_ID@
 # Translators: Do not translate or transliterate this text (this is an icon file name)!
 Icon=@SERVER_ID@
-DBusActivatable=true
 
 NoDisplay=true
 

@@ -20,10 +20,3 @@ desktop_file = configure_file(
   install: true,
   install_dir: datadir / 'applications',
 )
-
-configure_file(
-    input: 'server.service.in',
-    output: '@0@.service'.format(server_id),
-    configuration: { 'SERVER_ID': server_id },
-    install_dir: datadir / 'dbus-1' / 'services'
-)
