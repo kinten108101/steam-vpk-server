@@ -6,7 +6,8 @@ import { Addon, AddonManifest } from './addons.js';
 import Downloader from './downloader.js';
 import AddonStorage from './addon-storage.js';
 import SteamworkServices from './steam-api.js';
-import { g_model_foreach, log_error, promise_wrap, registerClass } from './steam-vpk-utils/utils.js';
+import { g_model_foreach, log_error, promise_wrap, registerClass, vardict_make } from './steam-vpk-utils/utils.js';
+import { GVariantFormat } from './gvariant.js';
 
 export interface ArchiveManifest {
   path?: string;
@@ -31,9 +32,18 @@ function parse_archive_type(val: string): ArchiveType | null {
   return ret;
 }
 
-export class Archive extends GObject.Object {
+export class Archive extends GObject.Object implements GVariantFormat {
   static {
     registerClass({}, this);
+  }
+
+  static getGVariantType() {
+    return GLib.VariantType.new_array(
+      GLib.VariantType.new_dict_entry(
+        GLib.VariantType.new('s'),
+        GLib.VariantType.new('v')
+      )
+    );
   }
 
   static make(
@@ -110,6 +120,10 @@ export class Archive extends GObject.Object {
   toManifest() {
     return {};
   }
+
+  toGVariant() {
+    return vardict_make({});
+  }
 }
 
 class LocalArchive extends Archive {
@@ -125,6 +139,17 @@ class LocalArchive extends Archive {
     const path = this.file.get_path() || undefined;
     const type = this.type;
     return <ArchiveManifest>{ path, type };
+  }
+
+  toGVariant() {
+    return vardict_make({
+      path: (() => {
+        const path = this.file.get_path();
+        if (path === null) return null;
+        return GLib.Variant.new_string(path);
+      })(),
+      type: GLib.Variant.new_string(ArchiveType[this.type]),
+    });
   }
 }
 
@@ -149,6 +174,27 @@ class RemoteArchive extends Archive {
     const size = this.expected_size;
     return <ArchiveManifest>{ path, type, url, size };
   }
+
+  toGVariant() {
+    return vardict_make({
+      path: (() => {
+        const path = this.file.get_path();
+        if (path === null) return null;
+        return GLib.Variant.new_string(path);
+      })(),
+      type: GLib.Variant.new_string(ArchiveType[this.type]),
+      url: (() => {
+        const url = this.url.to_string();
+        if (url === null) return null;
+        return GLib.Variant.new_string(url);
+      })(),
+      size: (() => {
+        const size = this.expected_size;
+        if (size === undefined) return null;
+        return GLib.Variant.new_uint64(size);
+      })(),
+    });
+  }
 }
 
 export class ArchiveGroup extends GObject.Object {
@@ -172,6 +218,18 @@ export class ArchiveGroup extends GObject.Object {
       arr.push(manifest);
     });
     return arr;
+  }
+
+  toGVariant(): GLib.Variant {
+    const arr: GLib.Variant[] = [];
+    g_model_foreach(this.archives, (item: Archive) => {
+      const gvariant = item.toGVariant();
+      arr.push(gvariant);
+    });
+    return GLib.Variant.new_array(
+      /* child type */ Archive.getGVariantType(),
+      /* children */ arr
+      );
   }
 }
 

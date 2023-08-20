@@ -1,9 +1,11 @@
 import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 
 import { ArchiveGroup, ArchiveManifest } from './archiver.js';
 import { ADDON_INFO } from './const.js';
-import { registerClass } from './steam-vpk-utils/utils.js';
+import { registerClass, vardict_make } from './steam-vpk-utils/utils.js';
+import { GVariantFormat } from './gvariant.js';
 
 export interface StorageExport {
   addondetails: {
@@ -24,7 +26,7 @@ export interface AddonManifest {
   description?: string,
   tags?: { tag: string }[],
   comment?: string,
-  creators?: { creator: string }[],
+  creators?: { creator?: string }[],
   archives?: ArchiveManifest[],
 }
 
@@ -86,7 +88,7 @@ export namespace AddonFlags {
 }
 
 
-export class Addon extends GObject.Object {
+export class Addon extends GObject.Object implements GVariantFormat {
   static [GObject.signals] = {
     'modified': {},
   };
@@ -95,35 +97,13 @@ export class Addon extends GObject.Object {
     registerClass({}, this);
   };
 
-  static toManifest(addon: Addon) {
-    const manifest: AddonManifest = {
-      stvpkid: addon.vanityId,
-      publishedfileid: addon.steamId,
-      time_updated: (() => {
-            const date = addon.timeUpdated;
-            if (date === undefined) return date;
-            return Math.floor(date.getTime() / 1000);
-          })(),
-      title: addon.title,
-      description: addon.description,
-      tags: (() => {
-            const categories = new Map(addon.categories);
-            const tags: { tag: string }[] = [];
-            categories.forEach((_, key) => tags.push({ tag: key }));
-            return tags;
-          })(),
-      comment: addon.comment,
-      creators: (() => {
-            const creators = new Map(addon.creators);
-            const _creators: { creator: string }[] = [];
-            creators.forEach((_, key) => _creators.push({ creator: key }));
-            return _creators;
-          })(),
-      archives: (() => {
-            return addon.archive_group?.toManifest();
-          })(),
-    };
-    return manifest;
+  static getGVariantType() {
+    return GLib.VariantType.new_array(
+      GLib.VariantType.new_dict_entry(
+        GLib.VariantType.new('s'),
+        GLib.VariantType.new('v')
+      )
+    );
   }
 
   id: string;
@@ -197,6 +177,86 @@ export class Addon extends GObject.Object {
       }
     }
     return true;
+  }
+
+  toManifest() {
+    const manifest: AddonManifest = {
+      stvpkid: this.vanityId,
+      publishedfileid: this.steamId,
+      time_updated: (() => {
+            const date = this.timeUpdated;
+            if (date === undefined) return date;
+            return Math.floor(date.getTime() / 1000);
+          })(),
+      title: this.title,
+      description: this.description,
+      tags: (() => {
+            const categories = new Map(this.categories);
+            const tags: { tag: string }[] = [];
+            categories.forEach((_, key) => tags.push({ tag: key }));
+            return tags;
+          })(),
+      comment: this.comment,
+      creators: (() => {
+            const creators = new Map(this.creators);
+            const _creators: { creator?: string }[] = [];
+            creators.forEach((_, key) => _creators.push({ creator: key }));
+            return _creators;
+          })(),
+      archives: (() => {
+            return this.archive_group?.toManifest();
+          })(),
+    };
+    return manifest;
+  }
+
+  toGVariant() {
+    return vardict_make({
+      stvpkid: GLib.Variant.new_string(this.id),
+      publishedfileid: (() => {
+        if (this.steamId === undefined) return null;
+        return GLib.Variant.new_string(this.steamId);
+      })(),
+      time_updated: (() => {
+        if (this.timeUpdated === undefined) return null;
+        return GLib.Variant.new_uint64(this.timeUpdated.getTime() / 1000);
+      })(),
+      title: (() => {
+        if (this.title === undefined) return null;
+        return GLib.Variant.new_string(this.title);
+      })(),
+      description: (() => {
+        if (this.description === undefined) return null;
+        return GLib.Variant.new_string(this.description);
+      })(),
+      creators: (() => {
+        const arr: GLib.Variant[] = [];
+        const creators = this.creators;
+        if (creators === undefined) return null;
+        creators.forEach((_x, key) => {
+          const val = vardict_make({
+            id: (() => {
+              return GLib.Variant.new_string(key);
+            })(),
+          });
+          arr.push(val);
+        });
+        return GLib.Variant.new_array(
+          GLib.VariantType.new_array(
+            GLib.VariantType.new_dict_entry(
+              GLib.VariantType.new('s'),
+              GLib.VariantType.new('v')
+            )
+          ),
+          arr
+        );
+      })(),
+      subdir: GLib.Variant.new_string(this.subdir.get_path()),
+      archive_group: (() => {
+        if (this.archive_group === undefined) return null;
+        return this.archive_group.toGVariant();
+      })(),
+    });
   }
 }
 

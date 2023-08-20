@@ -25,6 +25,7 @@ import {
 import {
   array_insert,
   log_error,
+  promise_wrap,
   registerClass,
 } from './steam-vpk-utils/utils.js';
 
@@ -47,9 +48,24 @@ export enum ItemType {
   separator = 'separator',
 }
 
-export interface Configuration {
+export class Configuration {
   type: ItemType;
   active: boolean;
+
+  constructor(params: {
+    type?: ItemType;
+    active?: boolean;
+  }) {
+    this.type = params.type || ItemType.addon;
+    this.active = params.active || false;
+  }
+
+  serialize() {
+    return {
+      type: this.type,
+      active: this.active,
+    }
+  }
 }
 
 export interface Separator {
@@ -66,15 +82,15 @@ function parse_item_type_enum(val: string | undefined): ItemType {
 }
 
 function make_configuration_from_manifest(manifest: ConfigurationFileEntry) {
-  const obj: Configuration = {
+  const obj = new Configuration({
+    type: parse_item_type_enum(manifest.type),
     active: (() => {
       if (manifest.active !== undefined) {
         return manifest.active;
       }
       return false;
     })(),
-    type: parse_item_type_enum(manifest.type),
-  };
+  });
   return obj;
 }
 
@@ -199,10 +215,13 @@ export default class AddonStorage extends GObject.Object implements Profile {
     this.archiver = archiver;
   }
 
+  async force_update() {
+    return this.indexer.load_file();
+  }
+
   async start() {
     console.info(`addon-dir-index: ${this.index.get_path()}`);
-    this.indexer.connect('subdirs-changed', this.updateIdMap);
-    this.connect('force-update', this.updateIdMap);
+    this.indexer.connect('subdirs-changed', () => promise_wrap(this.updateIdMap));
 
     try {
       make_dir_nonstrict(this.subdirFolder);
@@ -230,6 +249,17 @@ export default class AddonStorage extends GObject.Object implements Profile {
     this.loadorder_load(this)();
   }
 
+  idmap2gvariant() {
+    const arr: GLib.Variant[] = [];
+    this.idmap.forEach(x => {
+      arr.push(x.toGVariant());
+    });
+    return GLib.Variant.new_array(
+      Addon.getGVariantType(),
+      arr
+    );
+  }
+
   set_addons_enabled(val: boolean) {
     if (val === this.enabled) return;
     this.enabled = val;
@@ -248,7 +278,7 @@ export default class AddonStorage extends GObject.Object implements Profile {
     return this.idmap;
   }
 
-  updateIdMap = () => {
+  updateIdMap = async () => {
     const subdirs = this.indexer.subdirs;
     const draftMap = new Map<string, Addon>();
     this.model.remove_all();
@@ -281,6 +311,9 @@ export default class AddonStorage extends GObject.Object implements Profile {
       }
 
       const addon = this.addon_make(manifest);
+      addon?.creators?.forEach((_x, key) => {
+        console.log(key);
+      });
       if (addon === undefined) {
         console.warn('Could not register add-on. Skipping...');
         return;
@@ -513,7 +546,7 @@ export default class AddonStorage extends GObject.Object implements Profile {
       console.warn('Add-on could not be found, so could not save. Quitting...');
       return;
     }
-    const manifest = Addon.toManifest(addon);
+    const manifest = addon.toManifest();
     await replace_json_async(manifest, addon.info);
     this.emit(Signals.addons_changed);
   }
@@ -549,7 +582,11 @@ export default class AddonStorage extends GObject.Object implements Profile {
       comment: manifest.comment,
       creators: (() => {
               if (manifest.creators === undefined) return new Map();
-              const arr = manifest.creators?.map(({ creator }) => { return creator });
+              const arr: string[] = [];
+              manifest.creators?.forEach(x => {
+                if (x.creator === undefined) return;
+                arr.push(x.creator);
+              });
               const map = new Map<string, {}>();
               arr.forEach(x => {
                 map.set(x, {})

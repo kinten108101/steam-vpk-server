@@ -9,8 +9,11 @@ exec_config.set('BUILD_TYPE', get_option('buildtype'))
 
 script = [
   'services/addons.ts',
+  'services/dbus-service.ts',
+  'services/disk.ts',
   'services/injector.ts',
-  'services/service.ts',
+  'services/settings-writer.ts',
+  'services/workshop.ts',
   'steam-vpk-utils/dbus-utils.ts',
   'steam-vpk-utils/portals.ts',
   'steam-vpk-utils/utils.ts',

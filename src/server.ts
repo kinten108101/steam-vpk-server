@@ -23,7 +23,11 @@ import {
 import { make_dir_nonstrict } from './file.js';
 import InjectorService from './services/injector.js';
 import AddonsService from './services/addons.js';
-import { BackgroundPortal } from './steam-vpk-utils/portals.js';
+import { BackgroundPortal, ListenPortalResponses } from './steam-vpk-utils/portals.js';
+import WorkshopService from './services/workshop.js';
+import DiskService from './services/disk.js';
+import { ExportStore } from './services/dbus-service.js';
+import SettingsWriter from './services/settings-writer.js';
 
 export default function Server() {
   console.log(`build-type: ${BUILD_TYPE}`);
@@ -101,21 +105,42 @@ export default function Server() {
     Gio.BusType.SESSION,
     SERVER_ID,
     Gio.BusNameOwnerFlags.NONE,
-    null,
     (connection: Gio.DBusConnection) => {
-      BackgroundPortal({
+      const export_store = ExportStore();
+      ListenPortalResponses({
         connection,
-      }).request_background()
-        .set_status('Powering Steam VPK Applications')
-        .close();
+      }).start();
+      BackgroundPortal()
+        .request_background()
+        .set_status('Powering Steam VPK Applications');
       InjectorService({
-        injector: injector,
-        injection_store: injection_store,
-      }).export2dbus(connection, SERVER_PATH);
+        interface_name: `${SERVER_ID}.Injector`,
+        injector,
+        injection_store,
+      }).export2dbus(connection, `${SERVER_PATH}/injector`)
+        .save(export_store);
       AddonsService({
-        addon_storage: addon_storage,
-      }).export2dbus(connection, SERVER_PATH);
+        interface_name: `${SERVER_ID}.Addons`,
+        addon_storage,
+      }).export2dbus(connection, `${SERVER_PATH}/addons`)
+        .save(export_store);
+      WorkshopService({
+        interface_name: `${SERVER_ID}.Workshop`,
+      }).export2dbus(connection, `${SERVER_PATH}/workshop`)
+        .save(export_store);
+      DiskService({
+        interface_name: `${SERVER_ID}.Disk`,
+        disk_capacity,
+        addon_storage,
+      }).export2dbus(connection, `${SERVER_PATH}/disk`)
+        .save(export_store);
+      SettingsWriter({
+        interface_name: `${SERVER_ID}.Settings`,
+        settings,
+      }).export2dbus(connection, `${SERVER_PATH}/settings`)
+        .save(export_store);
     },
+    null,
     () => {
     console.log('Name lost');
     loop.quit();
