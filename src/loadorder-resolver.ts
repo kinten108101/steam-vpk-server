@@ -65,7 +65,7 @@ export default class LoadorderResolver {
 
   application!: Gtk.Application;
   profiles: Set<Profile> = new Set;
-  id_map: WeakRefMap<string, Profile> = new Map();
+  id_map: WeakRefMap<string, Profile> = new WeakRefMap();
   session_map: WeakMap<Gtk.WindowGroup, Profile> = new WeakMap();
 
   bind() {}
