@@ -12,7 +12,7 @@ script = [
   'services/dbus-service.ts',
   'services/disk.ts',
   'services/injector.ts',
-  'services/settings-writer.ts',
+  'services/settings.ts',
   'services/workshop.ts',
   'steam-vpk-utils/dbus-utils.ts',
   'steam-vpk-utils/portals.ts',

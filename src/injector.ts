@@ -113,6 +113,7 @@ export default class Injector {
     this.addon_storage = params.addon_storage;
     this.settings = params.settings;
     this.settings.connect('notify::game-dir', () => {
+      if (!this.settings.game_dir) return;
       this.linkdir = this.settings.game_dir.get_child('left4dead2').get_child('addons');
       console.log('New linkdir:', this.linkdir.get_path());
     });

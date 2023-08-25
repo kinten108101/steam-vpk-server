@@ -9,7 +9,7 @@ import Settings from '../settings.js';
  * This is ill-advised as write-access is now made public. Perhaps we need
  * an authentication method?
  */
-export default function SettingsWriter(
+export default function SettingsService(
 { interface_name,
   settings,
 }:
@@ -19,19 +19,18 @@ export default function SettingsWriter(
   const skeleton = Gio.DBusExportedObject.wrapJSObject(
 `<node>
   <interface name="${interface_name}">
-    <method name="Write">
-      <arg name="key" type="" />
-    </method>
+    <property name="GameDirectory" type="s" access="readwrite" />
   </interface>
 </node>`,
     new class {
-      Write(key: string, value: GLib.Variant): boolean {
-        if (key === 'game-dir') {
-          if (!value.is_of_type(GLib.VariantType.new('s'))) return false;
-          settings.set_game_dir(value.deepUnpack());
-          return true;
-        }
-        return false;
+      set GameDirectory(val: string) {
+        const path = Gio.File.new_for_path(val);
+        settings.game_dir = path;
+        skeleton.emit_property_changed('GameDirectory', GLib.Variant.new_string(settings.game_dir.get_path() || ''));
+      }
+
+      get GameDirectory() {
+        return settings.game_dir?.get_path() || '';
       }
     });
 

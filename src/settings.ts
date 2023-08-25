@@ -1,45 +1,77 @@
+import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
-import Gtk from 'gi://Gtk';
 import Gio from 'gi://Gio';
-import { GSETTINGS_ID } from './const.js';
-import { g_param_default, registerClass } from './steam-vpk-utils/utils.js';
-
-Gio._promisify(Gtk.FileDialog.prototype, 'select_folder', 'select_folder_finish');
+import { g_param_default, param_spec_object, promise_wrap, registerClass } from './steam-vpk-utils/utils.js';
+import { create_json_async, read_json_async, replace_json_async } from './file.js';
 
 export default class Settings extends GObject.Object {
   static [GObject.properties] = {
     'game-dir': GObject.ParamSpec.object('game-dir', 'game-dir', 'game-dir', g_param_default, Gio.File.$gtype),
-    'game-dir-raw': GObject.ParamSpec.string('game-dir-raw', 'game-dir-raw', 'game-dir-raw', g_param_default, null),
+    settings_location: param_spec_object({ name: 'settings-location', objectType: Gio.File.$gtype }),
   };
 
   static {
     registerClass({}, this);
   }
-  gio_settings: Gio.Settings;
+  game_dir!: Gio.File | null;
+  settings_location!: Gio.File;
 
-  game_dir!: Gio.File;
-  game_dir_raw!: string;
-
-  constructor() {
-    super({});
-    this.gio_settings = new Gio.Settings({ schema_id: GSETTINGS_ID });
+  constructor(params: {
+    settings_location: Gio.File;
+  }) {
+    super(params);
   }
 
   bind() {
-    this.connect('notify::game-dir-raw', this.updateGameDir);
-    this.gio_settings.bind('game-dir', this, 'game-dir-raw', Gio.SettingsBindFlags.DEFAULT);
+    this.connect('notify::game-dir', this._save);
+  }
+
+  _load = () => {
+    promise_wrap(async () => {
+      let settings: unknown;
+      try {
+        settings = await read_json_async(this.settings_location);
+      } catch (error) {
+        logError(error);
+        return;
+      }
+      if (typeof settings !== 'object') {
+        console.warn('Settings file: not object');
+        return;
+      }
+      if (settings === null) {
+        console.warn('Settings file: is null');
+        return;
+      }
+      if ('game_dir' in settings && typeof settings.game_dir === 'string') {
+        this.game_dir = Gio.File.new_for_path(settings.game_dir);
+      }
+    });
+  }
+
+  _save = () => {
+    promise_wrap(async () => {
+      const content = {
+        game_dir: this.game_dir?.get_path() || '',
+      };
+
+      try {
+        await replace_json_async(content, this.settings_location);
+      } catch (error) {
+        logError(error);
+        return;
+      }
+    });
   }
 
   async start() {
-    this.updateGameDir();
-    console.info('game-dir:', this.game_dir.get_path());
-  }
-
-  updateGameDir = () => {
-    this.game_dir = Gio.File.new_for_path(this.game_dir_raw);
-  }
-
-  set_game_dir(val: string) {
-    this.gio_settings.set_string('game-dir', val);
+    try {
+      await create_json_async({}, this.settings_location);
+    } catch (error) {
+      if (error instanceof GLib.Error && error.matches(Gio.io_error_quark(), Gio.IOErrorEnum.EXISTS)) {}
+      else throw error;
+    }
+    this._load();
+    console.info('game-dir:', this.game_dir?.get_path());
   }
 }

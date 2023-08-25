@@ -27,7 +27,7 @@ import { BackgroundPortal, ListenPortalResponses } from './steam-vpk-utils/porta
 import WorkshopService from './services/workshop.js';
 import DiskService from './services/disk.js';
 import { ExportStore } from './services/dbus-service.js';
-import SettingsWriter from './services/settings-writer.js';
+import SettingsService from './services/settings.js';
 
 export default function Server() {
   console.log(`build-type: ${BUILD_TYPE}`);
@@ -53,7 +53,9 @@ export default function Server() {
   make_dir_nonstrict(download_dir);
   console.log(`download-dir: ${download_dir.get_path()}`);
 
-  const settings = new Settings();
+  const settings = new Settings({
+    settings_location: pkg_user_state_dir.get_child('settings.json'),
+  });
   const downloader = new Downloader({
     download_dir,
   });
@@ -80,7 +82,6 @@ export default function Server() {
   });
   disk_capacity.bind({
     addon_storage: addon_storage,
-    settings: settings.gio_settings,
   });
   injector.bind({
     addon_storage: addon_storage,
@@ -134,7 +135,7 @@ export default function Server() {
         addon_storage,
       }).export2dbus(connection, `${SERVER_PATH}/disk`)
         .save(export_store);
-      SettingsWriter({
+      SettingsService({
         interface_name: `${SERVER_ID}.Settings`,
         settings,
       }).export2dbus(connection, `${SERVER_PATH}/settings`)
