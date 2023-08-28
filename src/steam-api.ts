@@ -6,6 +6,10 @@ import { DefaultEncoder, read_json_bytes } from './file.js';
 import { OAUTH } from './const.js';
 import { generateAuthor } from './id.js';
 
+Gio._promisify(Soup.Session.prototype,
+  'send_and_read_async',
+  'send_and_read_finish');
+
 export type GetPublishedFileDetailsResponse = {
   response: {
     result: number;
@@ -62,10 +66,13 @@ export default class SteamworkServices {
       requestBody,
     );
     const gbytes = await this.session.send_and_read_async(msg, GLib.PRIORITY_DEFAULT, this.cancellable);
+    if (msg.status_code !== 200) {
+      throw new Error(`Request failed. Code ${msg.status_code}`);
+    }
     const bytes = gbytes.get_data();
     if (bytes === null) throw new Error('Response is empty');
     const response = read_json_bytes(bytes);
-    return response.publishedfileids[0];
+    return response['response']?.['publishedfiledetails']?.[0];
   }
 
   async getPlayerSummary(user_id: string): Promise<PlayerSummary> {

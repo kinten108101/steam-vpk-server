@@ -14,6 +14,7 @@ finish-args:
   - --share=ipc
   - --device=dri
   - --filesystem=home:rw
+  - --share=network
 
 cleanup:
   - /include

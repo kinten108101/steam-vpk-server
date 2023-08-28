@@ -28,6 +28,7 @@ import WorkshopService from './services/workshop.js';
 import DiskService from './services/disk.js';
 import { ExportStore } from './services/dbus-service.js';
 import SettingsWriter from './services/settings-writer.js';
+import { RequestApiImplement } from './services/requestapi.js';
 
 export default function Server() {
   console.log(`build-type: ${BUILD_TYPE}`);
@@ -106,6 +107,7 @@ export default function Server() {
     SERVER_ID,
     Gio.BusNameOwnerFlags.NONE,
     (connection: Gio.DBusConnection) => {
+      const requestapi = RequestApiImplement({ connection });
       const export_store = ExportStore();
       ListenPortalResponses({
         connection,
@@ -126,6 +128,8 @@ export default function Server() {
         .save(export_store);
       WorkshopService({
         interface_name: `${SERVER_ID}.Workshop`,
+        steamapi,
+        requestapi,
       }).export2dbus(connection, `${SERVER_PATH}/workshop`)
         .save(export_store);
       DiskService({
