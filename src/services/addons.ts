@@ -3,14 +3,17 @@ import Gio from 'gi://Gio';
 
 import AddonStorage from '../addon-storage.js';
 import { DBusService, ExportStoreService } from './dbus-service.js';
-import { promise_wrap } from '../steam-vpk-utils/utils.js';
+import { promise_wrap, vardict_make_v2 } from '../steam-vpk-utils/utils.js';
+import LoadorderResolver from '../loadorder-resolver.js';
 
 export default function AddonsService(
 { interface_name,
   addon_storage,
+  loadorder_resolver,
 }:
 { interface_name: string;
   addon_storage: AddonStorage;
+  loadorder_resolver: LoadorderResolver,
 }): DBusService {
   const service = Gio.DBusExportedObject.wrapJSObject(
 `<node>
@@ -24,6 +27,14 @@ export default function AddonsService(
     <method name="ForceUpdate" />
     <method name="Get">
       <arg name="id" type="s" direction="in" />
+      <arg name="info" type="a{sv}" direction="out" />
+    </method>
+    <method name="GetLoadorder">
+      <arg name="profile" type="s" direction="in" />
+      <arg name="info" type="as" direction="out" />
+    </method>
+    <method name="GetConfigurations">
+      <arg name="profile" type="s" direction="in" />
       <arg name="info" type="a{sv}" direction="out" />
     </method>
     <method name="HasArchive">
@@ -56,6 +67,23 @@ export default function AddonsService(
       const addon = addon_storage.get(id);
       if (addon === undefined) return false;
       return addon.has_archive_lite();
+    }
+
+    GetLoadorder(profile: string) {
+      if (profile === '')
+        return loadorder_resolver.default_profile.loadorder;
+      else throw new Error('Non-default profile is not yet supported');
+    }
+
+    GetConfigurations(profile: string) {
+      if (profile === '') {
+        const arr: [string, GLib.Variant][] = [];
+        loadorder_resolver.default_profile.configmap.forEach((val, key) => {
+          arr.push([key, val.toGVariant()]);
+        });
+        return GLib.Variant.new_tuple([vardict_make_v2(arr)]);
+      }
+      else throw new Error('Non-default profile is not yet supported');
     }
   });
 

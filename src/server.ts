@@ -63,7 +63,9 @@ export default function Server() {
     subdir_folder: addons_dir,
     pkg_user_state_dir: pkg_user_state_dir,
   });
-  const loadorder_resolver = new LoadorderResolver();
+  const loadorder_resolver = new LoadorderResolver({
+    default_profile_path: pkg_user_state_dir.get_child('config.metadata.json'),
+  });
   const disk_capacity = new DiskCapacity();
   const injector = new Injector();
   const injection_store = new InjectionStore();
@@ -71,19 +73,19 @@ export default function Server() {
   archiver.bind({
     downloader,
     steamapi,
-    addon_storage: addon_storage,
+    addon_storage,
   });
   loadorder_resolver.bind();
   addon_storage.bind({
-    archiver: archiver,
-    loadorder_resolver: loadorder_resolver,
+    archiver,
   });
   disk_capacity.bind({
-    addon_storage: addon_storage,
+    addon_storage,
     settings: settings.gio_settings,
   });
   injector.bind({
-    addon_storage: addon_storage,
+    addon_storage,
+    loadorder_resolver,
     settings: settings,
   });
   settings.bind();
@@ -95,6 +97,7 @@ export default function Server() {
     disk_capacity,
     settings,
     injector,
+    loadorder_resolver,
   ].forEach(x => {
     x.start().catch(error => logError(error));
   });
@@ -122,6 +125,7 @@ export default function Server() {
       AddonsService({
         interface_name: `${SERVER_ID}.Addons`,
         addon_storage,
+        loadorder_resolver,
       }).export2dbus(connection, `${SERVER_PATH}/addons`)
         .save(export_store);
       WorkshopService({

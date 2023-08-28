@@ -6,6 +6,8 @@ import { Archive } from './archiver.js';
 import { list_file_async } from './file.js';
 import type { SignalMethods } from '@girs/gjs';
 import Settings from './settings.js';
+import LoadorderResolver from './loadorder-resolver.js';
+import Profile, { AddonConfiguration } from './profile.js';
 
 Gio._promisify(Gio.File.prototype, 'make_symbolic_link_async', 'make_symbolic_link_finish');
 Gio._promisify(Gio.File.prototype, 'delete_async', 'delete_finish');
@@ -44,8 +46,10 @@ export class Injection {
   creation: Date;
   id: string;
   cancellable: Gio.Cancellable = new Gio.Cancellable;
+  target: Profile;
 
-  constructor(id: string) {
+  constructor(id: string, target: Profile) {
+    this.target = target;
     this.logs = [];
     this.creation = new Date();
     this.id = id;
@@ -94,6 +98,7 @@ export default class Injector {
   has_error = false;
 
   addon_storage!: AddonStorage;
+  loadorder_resolver!: LoadorderResolver;
   settings!: Settings;
   injections: WeakSet<Injection> = new WeakSet;
 
@@ -108,9 +113,11 @@ export default class Injector {
 
   bind(params: {
     addon_storage: AddonStorage;
+    loadorder_resolver: LoadorderResolver;
     settings: Settings;
   }) {
     this.addon_storage = params.addon_storage;
+    this.loadorder_resolver = params.loadorder_resolver;
     this.settings = params.settings;
     this.settings.connect('notify::game-dir', () => {
       this.linkdir = this.settings.game_dir.get_child('left4dead2').get_child('addons');
@@ -128,7 +135,7 @@ export default class Injector {
   }
 
   make_injection() {
-    return new Injection(Injector.generate_id());
+    return new Injection(Injector.generate_id(), this.loadorder_resolver.default_profile);
   }
 
   async run(injection: Injection) {
@@ -194,14 +201,17 @@ export default class Injector {
     if (injection.cancellable.is_cancelled()) throw_cancelled();
     injection.log('Reading loadorder...');
     const sources: Gio.File[] = [];
-    this.addon_storage.loadorder.forEach(x => {
+    injection.target.loadorder.forEach(x => {
       if (injection.cancellable.is_cancelled()) throw_cancelled();
       const addon = this.addon_storage.idmap.get(x);
       if (addon === undefined) {
         return;
       }
-      const config = this.addon_storage.configmap.get(x);
+      const config = injection.target.configmap.get(x);
       if (config === undefined) {
+        return;
+      }
+      if (config.type !== 'addon' || !(config instanceof AddonConfiguration)) {
         return;
       }
       if (!config.active) {
