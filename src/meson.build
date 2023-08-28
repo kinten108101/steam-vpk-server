@@ -32,6 +32,7 @@ script = [
   'loadorder-resolver.ts',
   'logger.ts',
   'main.ts',
+  'promisify.ts',
   'server.ts',
   'settings.ts',
   'simple-inv.ts',
