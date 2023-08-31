@@ -1,7 +1,7 @@
 import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import Gio from 'gi://Gio';
-import { g_param_default, param_spec_object, promise_wrap, registerClass } from './steam-vpk-utils/utils.js';
+import { g_param_default, param_spec_object, registerClass } from './steam-vpk-utils/utils.js';
 import { create_json_async, read_json_async, replace_json_async } from './file.js';
 
 export default class Settings extends GObject.Object {
@@ -27,7 +27,7 @@ export default class Settings extends GObject.Object {
   }
 
   _load = () => {
-    promise_wrap(async () => {
+    (async () => {
       let settings: unknown;
       try {
         settings = await read_json_async(this.settings_location);
@@ -46,11 +46,11 @@ export default class Settings extends GObject.Object {
       if ('game_dir' in settings && typeof settings.game_dir === 'string') {
         this.game_dir = Gio.File.new_for_path(settings.game_dir);
       }
-    });
+    })().catch(error => logError(error));
   }
 
   _save = () => {
-    promise_wrap(async () => {
+    (async () => {
       const content = {
         game_dir: this.game_dir?.get_path() || '',
       };
@@ -61,7 +61,7 @@ export default class Settings extends GObject.Object {
         logError(error);
         return;
       }
-    });
+    })().catch(error => logError(error));
   }
 
   async start() {

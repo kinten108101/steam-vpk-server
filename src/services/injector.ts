@@ -4,7 +4,6 @@ import Gtk from 'gi://Gtk';
 import Gdk from 'gi://Gdk';
 
 import Injector, { InjectionStore } from '../injector.js';
-import { promise_wrap } from '../steam-vpk-utils/utils.js';
 import { DBusService, ExportStoreService } from './dbus-service.js';
 
 export default function InjectorService(
@@ -55,16 +54,16 @@ export default function InjectorService(
 </node>`,
     {
     Run() {
-      promise_wrap(async () => {
+      (async () => {
         const inj = injector.make_injection();
         injection_store.set(inj.id, inj);
         injector.run(inj);
-      })
+      })().catch(error => logError(error));
     },
     RunWithGame() {
-      promise_wrap(async () => {
+      (async () => {
         const inj = injector.make_injection();
-        const game_hook = injector.connect(Injector.Signals.session_end, (_obj, id) => {
+        const game_hook = injector.connect('session-end', (_obj, id) => {
           if (id !== inj.id) {
             return;
           }
@@ -72,7 +71,9 @@ export default function InjectorService(
           inj.log('Starting Left 4 Dead 2...');
           Gtk.show_uri(null, 'steam://rungameid/550', Gdk.CURRENT_TIME);
         });
-      });
+        injection_store.set(inj.id, inj);
+        injector.run(inj);
+      })().catch(error => logError(error));
     },
     Cancel(id: string) {
       const inj = injection_store.get(id);
@@ -97,20 +98,19 @@ export default function InjectorService(
       return result;
     }
   });
-  injector.connect(Injector.Signals.running_prepare, (_obj, id: string) => {
-    console.log('server emits prepare');
+  injector.connect('running-prepare', (_obj, id: string) => {
     service.emit_signal('RunningPrepare', GLib.Variant.new_tuple([GLib.Variant.new_string(id)]));
   });
-  injector.connect(Injector.Signals.session_start, (_obj, id: string) => {
+  injector.connect('session-start', (_obj, id: string) => {
     service.emit_signal('SessionStart', GLib.Variant.new_tuple([GLib.Variant.new_string(id)]));
   });
-  injector.connect(Injector.Signals.session_finished, (_obj) => {
+  injector.connect('session-finished', (_obj) => {
     service.emit_signal('SessionFinished', GLib.Variant.new_tuple([]));
   });
-  injector.connect(Injector.Signals.session_end, (_obj, id: string) => {
+  injector.connect('session-end', (_obj, id: string) => {
     service.emit_signal('SessionEnd', GLib.Variant.new_tuple([GLib.Variant.new_string(id)]));
   });
-  injector.connect(Injector.Signals.running_cleanup, (_obj, id: string) => {
+  injector.connect('running-cleanup', (_obj, id: string) => {
     service.emit_signal('RunningCleanup', GLib.Variant.new_tuple([GLib.Variant.new_string(id)]));
   });
   injection_store.connect(InjectionStore.Signals.logs_changed, (_obj, id: string, msg: string) => {

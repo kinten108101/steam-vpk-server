@@ -1,7 +1,12 @@
+import GObject from 'gi://GObject';
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import AddonStorage from './addon-storage.js';
-import { g_model_foreach, log_error } from './steam-vpk-utils/utils.js';
+import {
+  g_model_foreach,
+  param_spec_boolean,
+  param_spec_object,
+} from './steam-vpk-utils/utils.js';
 import { Archive } from './archiver.js';
 import { list_file_async } from './file.js';
 import type { SignalMethods } from '@girs/gjs';
@@ -70,20 +75,38 @@ export class Injection {
   }
 }
 
-export default interface Injector extends SignalMethods {}
-export default class Injector {
-  static Signals = {
-    is_running_changed: 'is-running-changed',
-    running_prepare: 'running-prepare', // id
-    running_cleanup: 'running-cleanup', // id
-    session_start: 'session-start', // id
-    session_end: 'session-end', // id
-    session_finished: 'session-finished',
-    error: 'error',
-  };
-
+export default interface Injector extends GObject.Object {
+  connect(signal: 'running-prepare', callback: ($obj: this, id: string) => void): number;
+  emit(signal: 'running-prepare', id: string): void;
+  connect(signal: 'running-cleanup', callback: ($obj: this, id: string) => void): number;
+  emit(signal: 'running-cleanup', id: string): void;
+  connect(signal: 'session-start', callback: ($obj: this, id: string) => void): number;
+  emit(signal: 'session-start', id: string): void;
+  connect(signal: 'session-end', callback: ($obj: this, id: string) => void): number;
+  emit(signal: 'session-end', id: string): void;
+  connect(signal: 'session-finished', callback: ($obj: this) => void): number;
+  emit(signal: 'session-finished'): void;
+  connect(signal: 'error', callback: ($obj: this) => void): number;
+  emit(signal: 'error'): void;
+  connect(signal: string, callback: ($obj: this, ...args: any[]) => void): number;
+  emit(signal: string, ...args: any[]): void;
+}
+export default class Injector extends GObject.Object {
   static {
-    imports.signals.addSignalMethods(this.prototype);
+    GObject.registerClass(
+    { Signals: {
+        'running-prepare': { param_types: [GObject.TYPE_STRING] },
+        'running-cleanup': { param_types: [GObject.TYPE_STRING] },
+        'session-start': { param_types: [GObject.TYPE_STRING] },
+        'session-end': { param_types: [GObject.TYPE_STRING] },
+        'session-finished': { param_types: [] },
+        'error': { param_types: [] },
+      },
+      Properties: {
+        running: param_spec_boolean({ name: 'running', default_value: false }),
+        linkdir: param_spec_object({ name: 'linkdir', objectType: Gio.File.$gtype }),
+      },
+    }, this);
   }
 
   static last_id = 0;
@@ -94,45 +117,44 @@ export default class Injector {
   }
 
   linkdir: Gio.File | undefined;
-  #is_running = false;
+  running!: boolean;
   has_error = false;
 
   addon_storage!: AddonStorage;
   loadorder_resolver!: LoadorderResolver;
-  settings!: Settings;
   injections: WeakSet<Injection> = new WeakSet;
 
-  set_running(val: boolean, injection: Injection) {
-    this.#is_running = val;
-    this.emit(Injector.Signals.is_running_changed, this.#is_running, injection);
-  }
-
   get_running() {
-    return this.#is_running;
+    return this.running;
   }
 
-  bind(params: {
-    addon_storage: AddonStorage;
+  bind(
+  { addon_storage,
+    loadorder_resolver,
+    settings
+  }:
+  { addon_storage: AddonStorage;
     loadorder_resolver: LoadorderResolver;
     settings: Settings;
   }) {
-    this.addon_storage = params.addon_storage;
-    this.loadorder_resolver = params.loadorder_resolver;
-    this.settings = params.settings;
-    this.settings.connect('notify::game-dir', () => {
-      if (!this.settings.game_dir) return;
-      this.linkdir = this.settings.game_dir.get_child('left4dead2').get_child('addons');
-      console.log('New linkdir:', this.linkdir.get_path());
+    this.addon_storage = addon_storage;
+    this.loadorder_resolver = loadorder_resolver;
+    settings.bind_property_full('game-dir', this, 'linkdir', GObject.BindingFlags.SYNC_CREATE,
+      (_binding, from: Gio.File | null) => {
+        if (from === null) return [false, null];
+        const newval = from.get_child('left4dead2').get_child('addons');
+        return [true, newval];
+      },
+      () => {});
+    this.connect('notify::linkdir', () => {
+      console.debug('linkdir changed:', this.linkdir?.get_path());
     });
-  }
-
-  async start() {
   }
 
   finish(injection: Injection) {
     if (!this.injections.has(injection)) throw new InjectionNotFoundError();
     this.has_error = false;
-    this.emit(Injector.Signals.session_finished);
+    this.emit('session-finished');
   }
 
   make_injection() {
@@ -143,9 +165,9 @@ export default class Injector {
     if (this.injections.has(injection)) throw new DuplicatedInjectionError();
     this.injections.add(injection);
     this.has_error = false;
-    this.emit(Injector.Signals.running_prepare, injection.id);
-    this.set_running(true, injection);
-    this.emit(Injector.Signals.session_start, injection.id);
+    this.emit('running-prepare', injection.id);
+    this.running = true;
+    this.emit('session-start', injection.id);
     try {
       const time_start = new Date().getTime();
       console.log(time_start);
@@ -176,9 +198,9 @@ export default class Injector {
         injection.error('Unknown untyped error');
       }
     }
-    this.emit(Injector.Signals.session_end, injection.id);
-    this.set_running(false, injection);
-    this.emit(Injector.Signals.running_cleanup, injection.id);
+    this.emit('session-end', injection.id);
+    this.running = false;
+    this.emit('running-cleanup', injection.id);
   }
 
   async cleanup(injection: Injection) {
@@ -250,7 +272,7 @@ export default class Injector {
       try {
         await dest.make_symbolic_link_async(symlink_value, GLib.PRIORITY_DEFAULT, null);
       } catch (error) {
-        log_error(error, 'Skipping...');
+        logError(error as Error, 'Skipping...');
         continue;
       }
       i++;

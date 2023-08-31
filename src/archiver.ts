@@ -6,7 +6,11 @@ import { Addon, AddonManifest } from './addons.js';
 import Downloader from './downloader.js';
 import AddonStorage from './addon-storage.js';
 import SteamworkServices from './steam-api.js';
-import { g_model_foreach, log_error, promise_wrap, registerClass, vardict_make } from './steam-vpk-utils/utils.js';
+import {
+  g_model_foreach,
+  registerClass,
+  vardict_make,
+} from './steam-vpk-utils/utils.js';
 import { GVariantFormat } from './gvariant.js';
 
 export interface ArchiveManifest {
@@ -307,7 +311,7 @@ export default class Archiver {
     try {
       response = await this.steamapi.getPublishedFileDetails(steamId);
     } catch (error) {
-      log_error(error, 'Quitting...');
+      logError(error as Error, 'Quitting...');
       return false;
     }
     const url = GLib.Uri.parse(response?.file_url || null, GLib.UriFlags.NONE);
@@ -361,11 +365,11 @@ export default class Archiver {
       console.debug('Progress:', order.get_percentage());
     }, 1000);
     order.connect('completed', () => {
-      promise_wrap(async () => {
+      (async () => {
         announcer.destroy();
         console.debug('Download completed');
         await order.saved_location.move_async(dest, Gio.FileCopyFlags.NONE, GLib.PRIORITY_DEFAULT, null, null);
-      })
+      })().catch(error => logError(error));
     });
   }
 

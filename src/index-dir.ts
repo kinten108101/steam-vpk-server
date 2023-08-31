@@ -3,7 +3,6 @@ import Gio from 'gi://Gio';
 const Signals = imports.signals;
 import type { SignalMethods } from '@girs/gjs';
 import * as File from './file.js';
-import * as Utils from './steam-vpk-utils/utils.js';
 
 export class Subdir {
   id: string;
@@ -135,7 +134,7 @@ export default class IndexDirectory {
     try {
       await File.replace_json_async(content, this.index);
     } catch (error) {
-      Utils.log_error(error, 'Quitting...');
+      logError(error as Error, 'Quitting...');
       return;
     }
   }

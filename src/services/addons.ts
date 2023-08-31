@@ -3,7 +3,7 @@ import Gio from 'gi://Gio';
 
 import AddonStorage from '../addon-storage.js';
 import { DBusService, ExportStoreService } from './dbus-service.js';
-import { promise_wrap, vardict_make_v2 } from '../steam-vpk-utils/utils.js';
+import { vardict_make_v2 } from '../steam-vpk-utils/utils.js';
 import LoadorderResolver from '../loadorder-resolver.js';
 
 export default function AddonsService(
@@ -54,7 +54,8 @@ export default function AddonsService(
     }
 
     ForceUpdate() {
-      promise_wrap(addon_storage.force_update.bind(addon_storage));
+      addon_storage.force_update()
+        .catch(error => logError(error));
     }
 
     Get(id: string) {

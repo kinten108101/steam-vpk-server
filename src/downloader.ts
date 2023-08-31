@@ -78,7 +78,7 @@ class DownloadOrder extends GObject.Object {
     this.monitor_cancellable = new Gio.Cancellable;
     this.monitor = this.saved_location.monitor_file(Gio.FileMonitorFlags.NONE, this.monitor_cancellable);
     this.monitor.connect('changed', () => {
-      Utils.promise_wrap(async () => {
+      (async () => {
         let info;
         try {
           info = await this.saved_location.query_info_async(Gio.FILE_ATTRIBUTE_STANDARD_SIZE, Gio.FileQueryInfoFlags.NONE, GLib.PRIORITY_DEFAULT, this.cancellable);
@@ -88,7 +88,7 @@ class DownloadOrder extends GObject.Object {
           } else throw error;
         }
         if (info) this.bytesread = info.get_size();
-      });
+      })().catch(error => logError(error));
     });
   }
 
@@ -126,7 +126,7 @@ class DownloadOrder extends GObject.Object {
       await this.output_stream.flush_async(GLib.PRIORITY_DEFAULT, null);
       await this.output_stream.close_async(GLib.PRIORITY_DEFAULT, this.cancellable);
     } catch (error) {
-      Utils.log_error(error);
+      logError(error);
       return;
     }
     console.debug('Download completed!');
@@ -168,7 +168,7 @@ export default class Downloader extends GObject.Object {
     try {
       Files.make_dir_nonstrict(this.download_dir);
     } catch(error) {
-      Utils.log_error(error, 'Quitting...');
+      logError(error as Error, 'Quitting...');
       return;
     }
   }

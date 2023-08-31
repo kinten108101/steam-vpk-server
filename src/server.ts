@@ -97,14 +97,12 @@ export default function Server() {
     addon_storage,
     disk_capacity,
     settings,
-    injector,
     loadorder_resolver,
   ].forEach(x => {
     x.start().catch(error => logError(error));
   });
 
   const loop = new GLib.MainLoop(null, false);
-
   Gio.bus_own_name(
     Gio.BusType.SESSION,
     SERVER_ID,
@@ -114,9 +112,24 @@ export default function Server() {
       ListenPortalResponses({
         connection,
       }).start();
-      BackgroundPortal()
-        .request_background()
-        .set_status('Powering Steam VPK Applications');
+      (async () => {
+        const background_service = BackgroundPortal();
+
+        try {
+          await background_service.request_background();
+        } catch(error) {
+          logError(error);
+        }
+
+        try {
+          await background_service.set_status('Powering Steam VPK Applications');
+        } catch (error) {
+          if (error instanceof GLib.Error && error.matches(Gio.io_error_quark(), Gio.IOErrorEnum.DBUS_ERROR)) {
+            console.debug(error.message);
+          } else logError(error);
+        }
+
+      })().catch(error => logError(error));
       InjectorService({
         interface_name: `${SERVER_ID}.Injector`,
         injector,

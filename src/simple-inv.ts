@@ -3,7 +3,6 @@ import GLib from 'gi://GLib';
 const Signals = imports.signals;
 import type { SignalMethods } from '@girs/gjs';
 
-import * as Utils from './steam-vpk-utils/utils.js';
 import * as Files from './file.js';
 import Inventory, { InventoryItem, InventoryMethods } from './inventory.js';
 
@@ -26,7 +25,7 @@ export default class SimpleInventory extends Inventory implements InventoryMetho
       try {
         is_dir = await Files.is_dir_async(subdir);
       } catch (error) {
-        Utils.log_error(error, 'Skipping this item...');
+        logError(error as Error, 'Skipping this item...');
         continue;
       }
       if (!is_dir) {
@@ -72,7 +71,7 @@ export default class SimpleInventory extends Inventory implements InventoryMetho
     try {
       Files.make_dir_nonstrict(file);
     } catch (error) {
-      Utils.log_error(error, 'Quitting...');
+      logError(error as Error, 'Quitting...');
     }
     this.mark_state_modified();
   }

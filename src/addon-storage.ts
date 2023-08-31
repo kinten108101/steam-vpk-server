@@ -20,8 +20,6 @@ import {
   ADDON_INFO,
 } from './const.js';
 import {
-  log_error,
-  promise_wrap,
   registerClass,
 } from './steam-vpk-utils/utils.js';
 
@@ -98,7 +96,9 @@ export default class AddonStorage extends GObject.Object {
 
   async start() {
     console.info(`addon-dir-index: ${this.index.get_path()}`);
-    this.indexer.connect('subdirs-changed', () => promise_wrap(this.updateIdMap));
+    this.indexer.connect('subdirs-changed', () => {
+      this.updateIdMap().catch(error => logError(error));
+    });
 
     try {
       make_dir_nonstrict(this.subdirFolder);
@@ -214,7 +214,7 @@ export default class AddonStorage extends GObject.Object {
     try {
       replace_json(addon, info_location);
     } catch (error) {
-      log_error(error, 'Quitting...');
+      logError(error as Error, 'Quitting...');
       return;
     }
 
