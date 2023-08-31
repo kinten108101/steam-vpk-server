@@ -13,6 +13,7 @@
     "module": "ES2020",
     "moduleResolution": "node",
     "baseUrl": ".",
+    "pretty": true,
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
