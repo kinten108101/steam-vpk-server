@@ -1,3 +1,4 @@
+import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import { DBusService, ExportStoreService } from './dbus-service.js';
 import SteamworkServices, { make_workshop_item_url } from '../steam-api.js';
@@ -33,15 +34,18 @@ export default function WorkshopService(
     GetPublishedFileDetails(client: string, url: string) {
       (async () => {
         const id = steamapi.getWorkshopItemId(url);
-        if (id === undefined) throw new Error;
         const data = await steamapi.getPublishedFileDetails(id);
         requestapi.respond(client, 'GetPublishedFileDetails', {
           status: 0,
           data,
         });
-      })().catch(_error => {
+      })().catch(error => {
         requestapi.respond(client, 'GetPublishedFileDetails', {
           status: 1,
+          data: {
+            code: error instanceof GLib.Error ? error.code : -1,
+            msg: error.msg || '',
+          },
         });
       });
     }
