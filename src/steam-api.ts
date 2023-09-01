@@ -6,6 +6,20 @@ import { DefaultEncoder, read_json_bytes } from './file.js';
 import { OAUTH } from './const.js';
 import { generateAuthor } from './id.js';
 
+Gio._promisify(Soup.Session.prototype,
+  'send_and_read_async',
+  'send_and_read_finish');
+
+export function steam_api_error_quark() {
+  return GLib.quark_from_string('steam-api-error');
+}
+
+export enum SteamApiErrorEnum {
+  IdNotFound,
+  IdNotDecimal,
+  RequestNotSuccessful,
+}
+
 export type GetPublishedFileDetailsResponse = {
   response: {
     result: number;
@@ -62,10 +76,16 @@ export default class SteamworkServices {
       requestBody,
     );
     const gbytes = await this.session.send_and_read_async(msg, GLib.PRIORITY_DEFAULT, this.cancellable);
+    if (msg.status_code !== 200) {
+      throw new GLib.Error(
+        steam_api_error_quark(),
+        SteamApiErrorEnum.RequestNotSuccessful,
+        `Request was not successful. Received a response status code \"${msg.status_code}\"`);
+    }
     const bytes = gbytes.get_data();
-    if (bytes === null) throw new Error('Response is empty');
+    if (bytes === null) throw new Error;
     const response = read_json_bytes(bytes);
-    return response.publishedfileids[0];
+    return response['response']?.['publishedfiledetails']?.[0];
   }
 
   async getPlayerSummary(user_id: string): Promise<PlayerSummary> {
@@ -84,14 +104,22 @@ export default class SteamworkServices {
     return response.players[0];
   }
 
-  getWorkshopItemId(url: string): string | undefined {
+  getWorkshopItemId(url: string): string {
     const idxParam = url.indexOf('?id=', 0);
-    if (idxParam === undefined)
-      return undefined;
+    if (idxParam === undefined) {
+      throw new GLib.Error(
+        steam_api_error_quark(),
+        SteamApiErrorEnum.IdNotFound,
+        `Could not extract id parameter from url \"${url}\"`);
+    }
 
     const fileId = url.substring(idxParam + 4, idxParam + 14);
-    if (!isNumberString(fileId))
-      return undefined;
+    if (!isNumberString(fileId)) {
+      throw new GLib.Error(
+        steam_api_error_quark(),
+        SteamApiErrorEnum.IdNotDecimal,
+        `Supposed id parameter in url \"${url}\" is not in decimal format`);
+    }
     return fileId;
   }
 
