@@ -1,14 +1,13 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
-import Downloader from './downloader.js';
-import AddonStorage from './addon-storage.js';
-import DiskCapacity from './disk-capacity.js';
-import SteamworkServices from './steam-api.js';
-import Archiver from './archiver.js';
-import Injector, { InjectionStore } from './injector.js';
-import Settings from './settings.js';
-import LoadorderResolver from './loadorder-resolver.js';
+import AddonStorage from './models/addon-storage.js';
+import DiskCapacity from './services/disk-capacity.js';
+import SteamworkServices from './services/steam-api.js';
+import Archiver from './services/archiver.js';
+import Injector from './services/injector.js';
+import InjectionStore from './models/injection-store.js';
+import Settings from './services/settings.js';
 import {
   ADDON_DIR,
   BUILD_TYPE,
@@ -21,14 +20,16 @@ import {
   VERSION,
 } from './const.js';
 import { make_dir_nonstrict } from './file.js';
-import InjectorService from './services/injector.js';
-import AddonsService from './services/addons.js';
+import InjectorService from './exports/injector.js';
+import AddonsService from './exports/addons.js';
 import { BackgroundPortal, ListenPortalResponses } from './steam-vpk-utils/portals.js';
-import WorkshopService from './services/workshop.js';
-import DiskService from './services/disk.js';
-import { ExportStore } from './services/dbus-service.js';
-import SettingsService from './services/settings.js';
-import { RequestApiImplement } from './services/requestapi.js';
+import WorkshopService from './exports/workshop.js';
+import DiskService from './exports/disk.js';
+import { ExportStore } from './exports/dbus-service.js';
+import SettingsService from './exports/settings.js';
+import { RequestApiImplement } from './exports/requestapi.js';
+import ProfileStore from './models/profile-store.js';
+import DownloadQueue from './models/download-queue.js';
 
 export default function Server() {
   console.log(`build-type: ${BUILD_TYPE}`);
@@ -57,7 +58,7 @@ export default function Server() {
   const settings = new Settings({
     settings_location: pkg_user_state_dir.get_child('settings.json'),
   });
-  const downloader = new Downloader({
+  const download_queue = new DownloadQueue({
     download_dir,
   });
   const archiver = new Archiver();
@@ -66,7 +67,7 @@ export default function Server() {
     subdir_folder: addons_dir,
     pkg_user_state_dir: pkg_user_state_dir,
   });
-  const loadorder_resolver = new LoadorderResolver({
+  const profile_store = new ProfileStore({
     default_profile_path: pkg_user_state_dir.get_child('config.metadata.json'),
   });
   const disk_capacity = new DiskCapacity();
@@ -74,11 +75,10 @@ export default function Server() {
   const injection_store = new InjectionStore();
 
   archiver.bind({
-    downloader,
+    download_queue,
     steamapi,
     addon_storage,
   });
-  loadorder_resolver.bind();
   addon_storage.bind({
     archiver,
   });
@@ -87,18 +87,18 @@ export default function Server() {
   });
   injector.bind({
     addon_storage,
-    loadorder_resolver,
+    profile_store,
     settings: settings,
   });
   settings.bind();
 
   [
     settings,
-    downloader,
+    download_queue,
     addon_storage,
     disk_capacity,
     settings,
-    loadorder_resolver,
+    profile_store,
   ].forEach(x => {
     x.start().catch(error => logError(error));
   });
@@ -141,7 +141,7 @@ export default function Server() {
       AddonsService({
         interface_name: `${SERVER_ID}.Addons`,
         addon_storage,
-        loadorder_resolver,
+        profile_store,
       }).export2dbus(connection, `${SERVER_PATH}/addons`)
         .save(export_store);
       WorkshopService({

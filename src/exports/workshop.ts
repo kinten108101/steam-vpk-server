@@ -1,7 +1,7 @@
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import { DBusService, ExportStoreService } from './dbus-service.js';
-import SteamworkServices, { make_workshop_item_url } from '../steam-api.js';
+import SteamworkServices, { make_workshop_item_url } from '../services/steam-api.js';
 import { RequestApi } from './requestapi.js';
 
 export default function WorkshopService(

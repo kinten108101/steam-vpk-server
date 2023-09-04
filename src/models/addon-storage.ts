@@ -2,26 +2,26 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import GObject from 'gi://GObject';
 
-import IndexDirectory from './index-dir.js';
+import IndexDirectory from '../index-dir.js';
 import {
   Addon,
   AddonFlags,
   AddonManifest,
 } from './addons.js';
-import Archiver from './archiver.js';
+import Archiver from '../services/archiver.js';
 import {
   make_dir_nonstrict,
   read_json,
   replace_json,
   replace_json_async,
-} from './file.js';
+} from '../file.js';
 import {
   ADDON_INDEX,
   ADDON_INFO,
-} from './const.js';
+} from '../const.js';
 import {
   registerClass,
-} from './steam-vpk-utils/utils.js';
+} from '../steam-vpk-utils/utils.js';
 
 
 
@@ -178,7 +178,7 @@ export default class AddonStorage extends GObject.Object {
     this.emit(AddonStorage.Signals.addons_changed);
   }
 
-  async addon_trash(id: string) {
+  async addon_trash(id: string): Promise<boolean> {
     const subdir = this.subdirFolder.get_child(id);
     try {
       // @ts-ignore
@@ -186,9 +186,9 @@ export default class AddonStorage extends GObject.Object {
     } catch (error) {
       logError(error);
       console.error('Quitting...');
-      return;
+      return false;
     }
-    this.indexer.delete_entry(id);
+    return this.indexer.delete_entry(id);
   }
 
   async addon_create(addon: AddonManifest) {

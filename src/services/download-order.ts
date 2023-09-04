@@ -3,9 +3,7 @@ import Gio from 'gi://Gio';
 import GObject from 'gi://GObject';
 import Soup from 'gi://Soup';
 
-import * as Utils from './steam-vpk-utils/utils.js';
-import * as Files from './file.js';
-import * as Const from './const.js';
+import * as Utils from '../steam-vpk-utils/utils.js';
 
 export class FlattenByteModel extends Array<GLib.Bytes> {
   flatten() {
@@ -24,7 +22,7 @@ export class FlattenByteModel extends Array<GLib.Bytes> {
   }
 }
 
-class DownloadOrder extends GObject.Object {
+export default class DownloadOrder extends GObject.Object {
   static {
     Utils.registerClass({
       Signals: {
@@ -113,7 +111,6 @@ class DownloadOrder extends GObject.Object {
       /*
       let size = 1;
       while (size !== 0) {
-        console.time
         const gbytes = await this.input_stream.read_bytes_async(4096, GLib.PRIORITY_DEFAULT, this.cancellable);
         size = await this.output_stream.write_bytes_async(gbytes, GLib.PRIORITY_DEFAULT, this.cancellable);
         this.bytesread += size;
@@ -145,51 +142,5 @@ class DownloadOrder extends GObject.Object {
 
   is_running() {
     return !this.cancellable.is_cancelled();
-  }
-}
-
-export default class Downloader extends GObject.Object {
-  static {
-    Utils.registerClass({}, this);
-  }
-
-  session: Soup.Session;
-  download_dir: Gio.File;
-  queue: Gio.ListStore<DownloadOrder>;
-
-  constructor(param: { session?: Soup.Session; download_dir: Gio.File }) {
-    super({});
-    this.session = param.session || new Soup.Session();
-    this.queue = new Gio.ListStore({ item_type: DownloadOrder.$gtype });
-    this.download_dir = param.download_dir;
-  }
-
-  async start() {
-    try {
-      Files.make_dir_nonstrict(this.download_dir);
-    } catch(error) {
-      logError(error as Error, 'Quitting...');
-      return;
-    }
-  }
-
-  get_order(position: number) {
-    return this.queue.get_item(position);
-  }
-
-  register_order(params: { uri: GLib.Uri, size?: number, name: string }) {
-    const order = new DownloadOrder({
-      uri: params.uri,
-      size: params.size,
-      saved_location: (() => {
-        const subdir = this.download_dir.get_child(params.name);
-        // NOTE(kinten): can't make placeholder path so we'll throw on the error
-        Files.make_dir_nonstrict(subdir);
-        const archive = subdir.get_child(Const.ADDON_ARCHIVE);
-        return archive;
-      })(),
-      session: this.session,
-    });
-    return order;
   }
 }

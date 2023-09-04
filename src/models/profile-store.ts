@@ -1,0 +1,43 @@
+import Gio from 'gi://Gio';
+import Gtk from 'gi://Gtk';
+import { registerClass } from '../steam-vpk-utils/utils.js';
+import Profile from './profile.js';
+
+
+export default class ProfileStore extends Gio.ListStore {
+  static {
+    registerClass({}, this);
+  }
+
+  custom_profiles!: Gio.ListModel;
+
+  constructor(params: {
+    default_profile_path: Gio.File,
+  }) {
+    super({ item_type: Profile.$gtype });
+    this.connect('notify::n-items', this._update_custom_profiles_model.bind(this));
+    this._update_custom_profiles_model();
+    const default_profile = new Profile({
+      id: 'no id',
+      file: params.default_profile_path,
+    });
+    this.append(default_profile);
+  }
+
+  get default_profile() {
+    return this.get_item(0) as Profile;
+  }
+
+  _update_custom_profiles_model() {
+    this.custom_profiles = new Gtk.SliceListModel({
+      model: this,
+      offset: 1,
+      size: this.get_n_items() - 1,
+    });
+
+  }
+
+  async start() {
+    await this.default_profile?.start();
+  }
+}

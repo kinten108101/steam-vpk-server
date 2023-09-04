@@ -2,10 +2,10 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 
-import { ArchiveGroup, ArchiveManifest } from './archiver.js';
-import { ADDON_INFO } from './const.js';
-import { registerClass, vardict_make } from './steam-vpk-utils/utils.js';
-import { GVariantFormat } from './gvariant.js';
+import { ArchiveGroup, ArchiveManifest } from '../services/archiver.js';
+import { ADDON_INFO } from '../const.js';
+import { registerClass, vardict_make } from '../steam-vpk-utils/utils.js';
+import { GVariantFormat } from '../gvariant.js';
 
 export interface StorageExport {
   addondetails: {

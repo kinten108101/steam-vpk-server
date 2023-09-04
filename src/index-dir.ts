@@ -154,14 +154,15 @@ export default class IndexDirectory {
     }
   }
 
-  delete_entry(id: string) {
+  delete_entry(id: string): boolean {
     const deletion = this.subdirs.delete(id);
     if (!deletion) {
       console.warn(`Tried to delete a non-existent subdir with id ${id}. Quitting...`);
-      return;
+      return false;
     }
 
     this.mark_state_modified();
+    return true;
   }
 
   add_entry(id: string) {

@@ -1,8 +1,8 @@
 import Gio from 'gi://Gio';
 import { DBusService, ExportStoreService } from './dbus-service.js';
-import DiskCapacity from '../disk-capacity.js';
-import AddonStorage from '../addon-storage.js';
-import { bytes2humanreadable } from '../file.js';
+import DiskCapacity from '../services/disk-capacity.js';
+import AddonStorage from '../models/addon-storage.js';
+import { bytes2humanreadable } from '../steam-vpk-utils/files.js';
 
 export default function DiskService(
 { interface_name,

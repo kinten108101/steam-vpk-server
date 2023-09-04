@@ -1,8 +1,8 @@
 import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import Gio from 'gi://Gio';
-import { param_spec_object, param_spec_string, registerClass } from './steam-vpk-utils/utils.js';
-import { create_json, read_json, replace_json } from './file.js';
+import { TYPE_JSOBJECT, param_spec_object, param_spec_string, registerClass } from '../steam-vpk-utils/utils.js';
+import { create_json, read_json, replace_json } from '../file.js';
 
 export type LoadorderEntries = 'addon';
 
@@ -126,11 +126,34 @@ export class AddonConfiguration extends Configuration {
   }
 }
 
-export type ProfileSignal = 'loadorder-changed' | 'order-changed' | 'entry-content-changed' | 'notify';
+type ChangeDescription = {
+  type: 'move',
+  source: number,
+  target: number,
+} |
+{
+  type: 'swap',
+  source: number,
+  target: number,
+} |
+{
+  type: 'append',
+} |
+{
+  type: 'remove',
+  target: number,
+} |
+{
+  type: 'unknown',
+};
+
+export type ProfileSignal = 'loadorder-changed' | 'order-changed' | 'entry-content-changed';
 
 export default interface Profile {
-  connect(signal: ProfileSignal, cb: (obj: this, ...args: any[]) => void): number;
-  emit(signal: ProfileSignal): void;
+  connect(signal: 'order-changed', callback: ($obj: this, list: string[], change: ChangeDescription) => void): number;
+  connect(signal: 'notify', callback: ($obj: this, pspec: GObject.ParamSpec) => void): number;
+  emit(signal: 'order-changed', list: string[], change: ChangeDescription): void;
+  emit(signal: 'notify', pspec: GObject.ParamSpec): void;
 }
 export default class Profile extends GObject.Object {
   static [GObject.properties] = {
@@ -141,7 +164,9 @@ export default class Profile extends GObject.Object {
 
   static [GObject.signals] = {
     'loadorder-changed': {},
-    'order-changed': {},
+    'order-changed': {
+      param_types: [TYPE_JSOBJECT, TYPE_JSOBJECT],
+    },
     'entry-content-changed': {},
   }
 
@@ -162,9 +187,7 @@ export default class Profile extends GObject.Object {
     file: Gio.File,
   }) {
     super(params);
-    this.connect('loadorder-changed', this.save.bind(this)); // experimental
     this.connect('order-changed', this.save.bind(this)); // experimental
-    this.connect('entry-content-changed', this.save.bind(this)); // experimental
   }
 
   toSerializable() {
@@ -228,28 +251,28 @@ export default class Profile extends GObject.Object {
     console.log(this.loadorder);
     this.configmap = draft_configmap;
 
-    this.emit('loadorder-changed');
+    this.emit('order-changed', this.loadorder, { type: 'unknown' });
   }
 
-  remove(id: string) {
+  remove(id: string): boolean {
     const idx = this.loadorder.indexOf(id);
     if (idx === -1) {
       console.warn(`Removing loadorder-entry \"${this.id}\":`, `Tried to remove from a loadorder it does not belong. Quitting...`);
-      return;
+      return false;
     }
-    // this is slow, ik. Should use a GModel which implements a binary tree
-    const draft_loadorder = this.loadorder.filter((_, i) => i !== idx);
-    const draft_configmap = new Map(this.configmap);
-    draft_configmap.delete(id);
-    this.loadorder = draft_loadorder;
-    this.configmap = draft_configmap;
-    this.emit('loadorder-changed');
+    this.loadorder.splice(idx, 1);
+    this.configmap.delete(id);
+    this.emit('order-changed', this.loadorder, {
+      type: 'remove',
+      target: idx,
+    });
+    return true;
   }
 
-  new_addon_configuration(id: string) {
+  new_addon_configuration(id: string): boolean {
     if (this.loadorder.includes(id)) {
       console.warn(`Appending loadorder-entry \"${this.id}\":`, 'Add-on is already included. Quitting...');
-      return;
+      return false;
     }
     this.loadorder.push(id);
     const config = new AddonConfiguration({
@@ -257,7 +280,8 @@ export default class Profile extends GObject.Object {
       active: false,
     });
     this.configmap.set(id, config);
-    this.emit('loadorder-changed');
+    this.emit('order-changed', this.loadorder, { type: 'append' });
+    return true;
   }
 
   swap(source: number, target: number) {
@@ -273,53 +297,29 @@ export default class Profile extends GObject.Object {
     }
     this.loadorder[source] = tgt;
     this.loadorder[target] = tmp;
-    this.emit('order-changed');
+    this.emit('order-changed', this.loadorder, {
+      type: 'swap',
+      source,
+      target,
+    });
   }
 
-  swap_silent(source: number, target: number): boolean {
-    const tmp = this.loadorder[source];
-    if (tmp === undefined) {
-      console.warn(`Swap index of tmp out-of-bound. Got ${source}. Quitting...`);
+  move(source: number, target: number): boolean {
+    const item = this.loadorder[source];
+    if (item === undefined) return false;
+    this.loadorder.splice(target, 0, item);
+    const source_re = this.loadorder.indexOf(item);
+    if (source_re === -1) {
+      console.warn('Item disappeared during move');
       return false;
     }
-    const tgt = this.loadorder[target];
-    if (tgt === undefined) {
-      console.warn(`Swap index of tgt out-of-bound. Got ${tgt}. Quitting...`);
-      return false;
-    }
-    this.loadorder[source] = tgt;
-    this.loadorder[target] = tmp;
+    this.loadorder.splice(source_re, 1);
+    this.emit('order-changed', this.loadorder, {
+      type: 'move',
+      source,
+      target,
+    });
     return true;
-  }
-
-  move_up_silent(source: number): number {
-    const stat = this.swap_silent(source, source - 1);
-    if (stat) return source - 1;
-    return NaN;
-  }
-
-  move_down_silent(source: number): number {
-    const stat = this.swap_silent(source, source + 1);
-    if (stat) return source + 1;
-    return NaN;
-  }
-
-  insert_silent(source: number, target: number) {
-    const stepper = source > target ? this.move_up_silent : this.move_down_silent;
-    let last_step = source;
-    const count = Math.abs(source - target);
-    for (let i = 0; i < count; i++) {
-      try {
-        last_step = stepper(last_step);
-      } catch (error) {
-        logError(error as Error, 'Skipping...');
-      }
-    }
-  }
-
-  insert(source: number, target: number) {
-    this.insert_silent(source, target);
-    this.emit('order-changed');
   }
 
   save() {

@@ -1,23 +1,27 @@
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 
-import AddonStorage from '../addon-storage.js';
+import AddonStorage from '../models/addon-storage.js';
 import { DBusService, ExportStoreService } from './dbus-service.js';
 import { vardict_make_v2 } from '../steam-vpk-utils/utils.js';
-import LoadorderResolver from '../loadorder-resolver.js';
+import ProfileStore from '../models/profile-store.js';
 
 export default function AddonsService(
 { interface_name,
   addon_storage,
-  loadorder_resolver,
+  profile_store,
 }:
 { interface_name: string;
   addon_storage: AddonStorage;
-  loadorder_resolver: LoadorderResolver,
+  profile_store: ProfileStore,
 }): DBusService {
   const service = Gio.DBusExportedObject.wrapJSObject(
 `<node>
   <interface name="${interface_name}">
+    <signal name="LoadOrderChanged">
+      <arg name="list" type="as" />
+      <arg name="ChangeDescription" type="a{sv}" />
+    </signal>
     <signal name="AddonsChanged">
       <arg name="list" type="aa{sv}" />
     </signal>
@@ -72,14 +76,14 @@ export default function AddonsService(
 
     GetLoadorder(profile: string) {
       if (profile === '')
-        return loadorder_resolver.default_profile.loadorder;
+        return profile_store.default_profile.loadorder;
       else throw new Error('Non-default profile is not yet supported');
     }
 
     GetConfigurations(profile: string) {
       if (profile === '') {
         const arr: [string, GLib.Variant][] = [];
-        loadorder_resolver.default_profile.configmap.forEach((val, key) => {
+        profile_store.default_profile.configmap.forEach((val, key) => {
           arr.push([key, val.toGVariant()]);
         });
         return GLib.Variant.new_tuple([vardict_make_v2(arr)]);

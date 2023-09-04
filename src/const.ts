@@ -9,8 +9,6 @@ export let DATA_DIR = 'share';
 export type BuildTypes = 'debug' | 'release';
 export let BUILD_TYPE: BuildTypes = 'release';
 
-/** @deprecated */
-export const APP_ID = 'com.github.kinten108101.SteamVPK';
 export const SERVER_ID = 'com.github.kinten108101.SteamVPK.Server';
 export const SERVER_PATH = '/com/github/kinten108101/SteamVPK/Server';
 export const GSETTINGS_ID = 'com.github.kinten108101.SteamVPK';

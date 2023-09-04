@@ -2,16 +2,16 @@ import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import Gio from 'gi://Gio';
 
-import { Addon, AddonManifest } from './addons.js';
-import Downloader from './downloader.js';
-import AddonStorage from './addon-storage.js';
+import { Addon, AddonManifest } from '../models/addons.js';
+import AddonStorage from '../models/addon-storage.js';
 import SteamworkServices from './steam-api.js';
 import {
   g_model_foreach,
   registerClass,
   vardict_make,
-} from './steam-vpk-utils/utils.js';
-import { GVariantFormat } from './gvariant.js';
+} from '../steam-vpk-utils/utils.js';
+import { GVariantFormat } from '../gvariant.js';
+import DownloadQueue from '../models/download-queue.js';
 
 export interface ArchiveManifest {
   path?: string;
@@ -238,7 +238,7 @@ export class ArchiveGroup extends GObject.Object {
 }
 
 export default class Archiver {
-  downloader!: Downloader;
+  download_queue!: DownloadQueue;
   steamapi!: SteamworkServices;
   addon_storage!: AddonStorage;
 
@@ -248,16 +248,16 @@ export default class Archiver {
 
   bind(
   {
-    downloader,
+    download_queue,
     steamapi,
     addon_storage,
   }:
   {
-    downloader: Downloader;
+    download_queue: DownloadQueue;
     steamapi: SteamworkServices;
     addon_storage: AddonStorage;
   }) {
-    this.downloader = downloader;
+    this.download_queue = download_queue;
     this.steamapi = steamapi;
     this.addon_storage = addon_storage;
   }
@@ -354,7 +354,7 @@ export default class Archiver {
       return;
     }
     const { url: uri, expected_size: size, file: dest } = archive;
-    const order = this.downloader.register_order({
+    const order = this.download_queue.register_order({
       uri,
       size,
       name: addon.id,

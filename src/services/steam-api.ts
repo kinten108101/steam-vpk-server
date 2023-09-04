@@ -1,10 +1,10 @@
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import Soup from 'gi://Soup';
-import { isNumberString } from './steam-vpk-utils/utils.js';
-import { DefaultEncoder, read_json_bytes } from './file.js';
-import { OAUTH } from './const.js';
-import { generateAuthor } from './id.js';
+import { isNumberString } from '../steam-vpk-utils/utils.js';
+import { DefaultEncoder, read_json_bytes } from '../file.js';
+import { OAUTH } from '../const.js';
+import { generateAuthor } from '../id.js';
 
 Gio._promisify(Soup.Session.prototype,
   'send_and_read_async',
@@ -18,6 +18,7 @@ export enum SteamApiErrorEnum {
   IdNotFound,
   IdNotDecimal,
   RequestNotSuccessful,
+  NotGameL4d2,
 }
 
 export type GetPublishedFileDetailsResponse = {
@@ -80,12 +81,19 @@ export default class SteamworkServices {
       throw new GLib.Error(
         steam_api_error_quark(),
         SteamApiErrorEnum.RequestNotSuccessful,
-        `Request was not successful. Received a response status code \"${msg.status_code}\"`);
+        `Request was not successful. Received a response status code of \"${msg.status_code}\"`);
     }
     const bytes = gbytes.get_data();
     if (bytes === null) throw new Error;
-    const response = read_json_bytes(bytes);
-    return response['response']?.['publishedfiledetails']?.[0];
+    const response: GetPublishedFileDetailsResponse = read_json_bytes(bytes);
+    const data = response['response']?.['publishedfiledetails']?.[0];
+    if (data?.consumer_app_id !== 550) {
+      throw new GLib.Error(
+        steam_api_error_quark(),
+        SteamApiErrorEnum.NotGameL4d2,
+        `The item belongs to a workshop of ID \"${data?.consumer_app_id}\", which is not L4D2 Workshop`);
+    }
+    return data;
   }
 
   async getPlayerSummary(user_id: string): Promise<PlayerSummary> {

@@ -1,8 +1,8 @@
 import Gio from 'gi://Gio';
 import GObject from 'gi://GObject';
-import * as Files from './file.js';
-import * as Utils from './steam-vpk-utils/utils.js';
-import AddonStorage from './addon-storage.js';
+import * as Files from '../file.js';
+import * as Utils from '../steam-vpk-utils/utils.js';
+import AddonStorage from '../models/addon-storage.js';
 
 export default class DiskCapacity extends GObject.Object {
   static {

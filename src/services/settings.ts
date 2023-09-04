@@ -1,52 +1,77 @@
 import GLib from 'gi://GLib';
+import GObject from 'gi://GObject';
 import Gio from 'gi://Gio';
-import { DBusService, ExportStoreService } from './dbus-service.js';
-import Settings from '../settings.js';
+import { g_param_default, param_spec_object, registerClass } from '../steam-vpk-utils/utils.js';
+import { create_json_async, read_json_async, replace_json_async } from '../file.js';
 
-/**
- * Experimental writing service for this Gio.Setting namespace.
- *
- * This is ill-advised as write-access is now made public. Perhaps we need
- * an authentication method?
- */
-export default function SettingsService(
-{ interface_name,
-  settings,
-}:
-{ interface_name: string;
-  settings: Settings;
-}): DBusService {
-  const skeleton = Gio.DBusExportedObject.wrapJSObject(
-`<node>
-  <interface name="${interface_name}">
-    <property name="GameDirectory" type="s" access="readwrite" />
-  </interface>
-</node>`,
-    new class {
-      set GameDirectory(val: string) {
-        const path = Gio.File.new_for_path(val);
-        settings.game_dir = path;
-        skeleton.emit_property_changed('GameDirectory', GLib.Variant.new_string(settings.game_dir.get_path() || ''));
+export default class Settings extends GObject.Object {
+  static [GObject.properties] = {
+    'game-dir': GObject.ParamSpec.object('game-dir', 'game-dir', 'game-dir', g_param_default, Gio.File.$gtype),
+    settings_location: param_spec_object({ name: 'settings-location', objectType: Gio.File.$gtype }),
+  };
+
+  static {
+    registerClass({}, this);
+  }
+  game_dir!: Gio.File | null;
+  settings_location!: Gio.File;
+
+  constructor(params: {
+    settings_location: Gio.File;
+  }) {
+    super(params);
+  }
+
+  bind() {
+    this.connect('notify::game-dir', this._save);
+  }
+
+  _load = () => {
+    (async () => {
+      let settings: unknown;
+      try {
+        settings = await read_json_async(this.settings_location);
+      } catch (error) {
+        logError(error);
+        return;
       }
-
-      get GameDirectory() {
-        return settings.game_dir?.get_path() || '';
+      if (typeof settings !== 'object') {
+        console.warn('Settings file: not object');
+        return;
       }
-    });
-
-  function export2dbus(connection: Gio.DBusConnection, path: string) {
-    skeleton.export(connection, path);
-    return methods;
+      if (settings === null) {
+        console.warn('Settings file: is null');
+        return;
+      }
+      if ('game_dir' in settings && typeof settings.game_dir === 'string') {
+        this.game_dir = Gio.File.new_for_path(settings.game_dir);
+      }
+    })().catch(error => logError(error));
   }
 
-  function save(storage: ExportStoreService) {
-    storage.store(skeleton);
-    return methods;
+  _save = () => {
+    (async () => {
+      const content = {
+        game_dir: this.game_dir?.get_path() || '',
+      };
+
+      try {
+        await replace_json_async(content, this.settings_location);
+      } catch (error) {
+        logError(error);
+        return;
+      }
+    })().catch(error => logError(error));
   }
 
-  const methods = {
-    export2dbus,
-    save,
+  async start() {
+    try {
+      await create_json_async({}, this.settings_location);
+    } catch (error) {
+      if (error instanceof GLib.Error && error.matches(Gio.io_error_quark(), Gio.IOErrorEnum.EXISTS)) {}
+      else throw error;
+    }
+    this._load();
+    console.info('game-dir:', this.game_dir?.get_path());
   }
-  return methods;
 }
