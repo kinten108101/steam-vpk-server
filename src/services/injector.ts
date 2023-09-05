@@ -69,13 +69,6 @@ export default class Injector extends GObject.Object {
     }, this);
   }
 
-  static last_id = 0;
-
-  static generate_id(): string {
-    this.last_id++;
-    return String(new Date().getTime()) + '-' + String(this.last_id);
-  }
-
   linkdir: Gio.File | undefined;
   running!: boolean;
   has_error = false;
@@ -83,10 +76,6 @@ export default class Injector extends GObject.Object {
   addon_storage!: AddonStorage;
   profile_store!: ProfileStore;
   injections: WeakSet<Injection> = new WeakSet;
-
-  get_running() {
-    return this.running;
-  }
 
   bind(
   { addon_storage,
@@ -118,7 +107,9 @@ export default class Injector extends GObject.Object {
   }
 
   make_injection() {
-    return new Injection(Injector.generate_id(), this.profile_store.default_profile);
+    return new Injection({
+      target: this.profile_store.default_profile,
+    });
   }
 
   async run(injection: Injection) {
@@ -129,20 +120,17 @@ export default class Injector extends GObject.Object {
     this.running = true;
     this.emit('session-start', injection.id);
     try {
-      const time_start = new Date().getTime();
-      console.log(time_start);
+      injection.time();
       await this.cleanup(injection);
       await this.load(injection);
       await new Promise((resolve) => {
         setTimeout(() => {
-          console.log('first');
           resolve(null);
         }, 3000);
       });
-      console.log('second');
       await this.link(injection);
-      const time_end = new Date().getTime();
-      injection.log(`Done in ${time_end - time_start}ms.`);
+      injection.timeEnd();
+      injection.log(`Done in ${injection.elapsed}ms.`);
     } catch (error) {
       this.has_error = true;
       logError(error);
@@ -183,7 +171,6 @@ export default class Injector extends GObject.Object {
   async load(injection: Injection) {
     if (injection.cancellable.is_cancelled()) throw_cancelled();
     injection.log('Reading loadorder...');
-    const sources: Gio.File[] = [];
     injection.target.loadorder.forEach(x => {
       if (injection.cancellable.is_cancelled()) throw_cancelled();
       const addon = this.addon_storage.idmap.get(x);
@@ -205,10 +192,9 @@ export default class Injector extends GObject.Object {
         return;
       }
       g_model_foreach(archive_group.archives, (item: Archive) => {
-        sources.push(item.file);
+        injection.sources.append(item.file);
       });
     });
-    injection.sources = sources;
   }
 
   async link(injection: Injection) {
@@ -220,8 +206,9 @@ export default class Injector extends GObject.Object {
       console.warn(`Sources of injection \"${id}\" have not been prepared. Quitting...`);
       return;
     }
-    let i = -1;
-    for (const x of injection.sources) {
+    let i = 0;
+    let x: Gio.File | null = injection.sources.get_item(i) as Gio.File | null;
+    while (x !== null) {
       if (injection.cancellable.is_cancelled()) throw_cancelled();
       const dest = Gio.File.new_for_path(GLib.build_filenamev([this.linkdir.get_path() || '', `${i}@stvpk.vpk`]));
       const symlink_value = x.get_path();
@@ -236,6 +223,7 @@ export default class Injector extends GObject.Object {
         continue;
       }
       i++;
+      x = injection.sources.get_item(i) as Gio.File | null;
     }
   }
 }

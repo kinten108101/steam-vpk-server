@@ -133,10 +133,10 @@ export default function Server() {
 
       })().catch(error => logError(error));
       InjectorService({
-        interface_name: `${SERVER_ID}.Injector`,
+        connection,
         injector,
         injection_store,
-      }).export2dbus(connection, `${SERVER_PATH}/injector`)
+      })
         .save(export_store);
       AddonsService({
         interface_name: `${SERVER_ID}.Addons`,

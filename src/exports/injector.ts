@@ -3,22 +3,24 @@ import Gio from 'gi://Gio';
 import Gtk from 'gi://Gtk';
 import Gdk from 'gi://Gdk';
 
-import { DBusService, ExportStoreService } from './dbus-service.js';
-import InjectionStore from '../models/injection-store.js';
+import { ExportStoreService } from './dbus-service.js';
+import InjectionStore, { Injection } from '../models/injection-store.js';
 import Injector from '../services/injector.js';
+import { SERVER_ID, SERVER_PATH } from '../const.js';
+import { get_formatted_unique_name_str } from '../steam-vpk-utils/portals.js';
 
 export default function InjectorService(
-{ interface_name,
+{ connection,
   injector,
   injection_store,
 }:
-{ interface_name: string;
+{ connection: Gio.DBusConnection;
   injector: Injector;
   injection_store: InjectionStore;
-}): DBusService {
+}) {
   const service = Gio.DBusExportedObject.wrapJSObject(
 `<node>
-  <interface name="${interface_name}">
+  <interface name="${SERVER_ID}.Injector">
     <signal name="RunningPrepare">
       <arg name="injection-id" type="s"/>
     </signal>
@@ -58,7 +60,7 @@ export default function InjectorService(
     Run() {
       (async () => {
         const inj = injector.make_injection();
-        injection_store.set(inj.id, inj);
+        injection_store.splice(injection_store.get_n_items(), 0, [inj]);
         injector.run(inj);
       })().catch(error => logError(error));
     },
@@ -73,7 +75,7 @@ export default function InjectorService(
           inj.log('Starting Left 4 Dead 2...');
           Gtk.show_uri(null, 'steam://rungameid/550', Gdk.CURRENT_TIME);
         });
-        injection_store.set(inj.id, inj);
+        injection_store.splice(injection_store.get_n_items(), 0, [inj]);
         injector.run(inj);
       })().catch(error => logError(error));
     },
@@ -83,7 +85,7 @@ export default function InjectorService(
         console.warn('Could not find injection attempt. Quitting...');
         return;
       }
-      inj.cancellable.cancel();
+      inj.stop();
     },
     Done(id: string) {
       const inj = injection_store.get(id);
@@ -116,23 +118,86 @@ export default function InjectorService(
   injector.connect('running-cleanup', (_obj, id: string) => {
     service.emit_signal('RunningCleanup', GLib.Variant.new_tuple([GLib.Variant.new_string(id)]));
   });
-  injection_store.connect(InjectionStore.Signals.logs_changed, (_obj, id: string, msg: string) => {
-    service.emit_signal('LogsChanged', GLib.Variant.new_tuple([GLib.Variant.new_string(id), GLib.Variant.new_string(msg)]));
+  service.export(connection, `${SERVER_PATH}/injector`);
+
+  const handler_map: WeakMap<Injection, {
+    service: Gio.DBusExportedObject | undefined;
+    injection_signals: number[];
+    injection_log_signals: number[];
+  }> = new WeakMap;
+  injection_store.connect('bind', (_obj, injection) => {
+    const injection_signals: number[] = [];
+    const injection_log_signals: number[] = [];
+    const service = Gio.DBusExportedObject.wrapJSObject(
+`<node>
+  <interface name="${SERVER_ID}.Injection">
+    <property name="Elapsed" type="t" access="read" />
+    <signal name="LogsChanged">
+      <arg name="message" type="s"/>
+    </signal>
+    <signal name="Cancelled" />
+  </interface>
+</node>`, {
+      get Elapsed() {
+        return injection.elapsed;
+      },
+    });
+
+    const using_logs_changed = injection.logs.connect('items-changed', (_obj, pos: number, removed: number, added: number) => {
+      if (removed > 0) {
+        console.error('InjectorService:', 'Line removal is not supported');
+        return;
+      }
+      for (let i = 0; i < added; i++) {
+        const idx = pos + i;
+        service.emit_signal('LogsChanged',
+          GLib.Variant.new_tuple([
+            GLib.Variant.new_string(injection.logs.get_string(idx) || '')
+          ])
+        );
+      }
+    });
+    injection_log_signals.push(using_logs_changed);
+
+    const using_cancelled = injection.connect('cancelled', () => {
+      service.emit_signal('Cancelled', GLib.Variant.new_tuple([]));
+    });
+    injection_signals.push(using_cancelled);
+
+    const using_elapsed = injection.connect('notify::elapsed', () => {
+      service.emit_property_changed('Elapsed', GLib.Variant.new_uint64(injection.elapsed));
+    });
+    injection_signals.push(using_elapsed);
+
+    service.export(connection, `${SERVER_PATH}/injections/${get_formatted_unique_name_str(injection.id)}`);
+
+    handler_map.set(injection, {
+      service,
+      injection_signals,
+      injection_log_signals,
+    });
   });
-  injection_store.connect(InjectionStore.Signals.cancelled, (_obj, id: string) => {
-    service.emit_signal('Cancelled', GLib.Variant.new_tuple([GLib.Variant.new_string(id)]));
+  injection_store.connect('unbind', (_obj, injection) => {
+    const handlers = handler_map.get(injection);
+    if (handlers === undefined) {
+      console.warn('InjectorService:', `Handlers not found for injection \"${injection.id}\"`);
+      return;
+    }
+    const { injection_signals, injection_log_signals, service } = handlers;
+    service?.unexport();
+    injection_signals.forEach(x => {
+      injection.disconnect(x);
+    });
+    injection_log_signals.forEach(x => {
+      injection.logs.disconnect(x);
+    });
   });
 
-  function export2dbus(connection: Gio.DBusConnection, path: string) {
-    service.export(connection, path);
-    return methods;
-  }
   function save(storage: ExportStoreService) {
     storage.store(service);
     return methods;
   }
   const methods = {
-    export2dbus,
     save,
   }
   return methods;
