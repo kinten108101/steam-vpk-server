@@ -24,6 +24,7 @@ export default function InjectorService(
     <signal name="RunningPrepare">
       <arg name="injection-id" type="s"/>
     </signal>
+    <property name="RunningPrepared" type="b" access="readwrite" />
     <signal name="SessionStart">
       <arg name="injection-id" type="s"/>
     </signal>
@@ -100,7 +101,13 @@ export default function InjectorService(
       const result = injection_store.get(id) !== undefined;
       console.log(result);
       return result;
-    }
+    },
+    set RunningPrepared(val: boolean) {
+      injector.running_prepared = val;
+    },
+    get RunningPrepared() {
+      return injector.running_prepared;
+    },
   });
   injector.connect('running-prepare', (_obj, id: string) => {
     service.emit_signal('RunningPrepare', GLib.Variant.new_tuple([GLib.Variant.new_string(id)]));
@@ -136,11 +143,17 @@ export default function InjectorService(
       <arg name="message" type="s"/>
     </signal>
     <signal name="Cancelled" />
+    <method name="GetLatestLine">
+      <arg name="line" type="s" direction="out" />
+    </method>
   </interface>
 </node>`, {
       get Elapsed() {
         return injection.elapsed;
       },
+      GetLatestLine() {
+        return injection.logs.get_string(injection.logs.get_n_items() - 1) || '';
+      }
     });
 
     const using_logs_changed = injection.logs.connect('items-changed', (_obj, pos: number, removed: number, added: number) => {
@@ -150,9 +163,11 @@ export default function InjectorService(
       }
       for (let i = 0; i < added; i++) {
         const idx = pos + i;
+        const val = injection.logs.get_string(idx) || '';
+        console.log('logs-changed', `\"${val}\"`);
         service.emit_signal('LogsChanged',
           GLib.Variant.new_tuple([
-            GLib.Variant.new_string(injection.logs.get_string(idx) || '')
+            GLib.Variant.new_string(val)
           ])
         );
       }

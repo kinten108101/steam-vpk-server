@@ -50,6 +50,7 @@ export default interface Injector extends GObject.Object {
   emit(signal: 'error'): void;
   connect(signal: string, callback: ($obj: this, ...args: any[]) => void): number;
   emit(signal: string, ...args: any[]): void;
+  connect(signal: 'notify::running-prepared', callback: ($obj: this, pspec: GObject.ParamSpec) => void): number;
 }
 export default class Injector extends GObject.Object {
   static {
@@ -63,15 +64,19 @@ export default class Injector extends GObject.Object {
         'error': { param_types: [] },
       },
       Properties: {
+        running_prepared: GObject.ParamSpec.boolean('running-prepared', '', '',
+          GObject.ParamFlags.READWRITE | GObject.ParamFlags.CONSTRUCT,
+          false),
         running: param_spec_boolean({ name: 'running', default_value: false }),
         linkdir: param_spec_object({ name: 'linkdir', objectType: Gio.File.$gtype }),
       },
     }, this);
   }
 
-  linkdir: Gio.File | undefined;
-  running!: boolean;
   has_error = false;
+  running_prepared!: boolean;
+  running!: boolean;
+  linkdir: Gio.File | undefined;
 
   addon_storage!: AddonStorage;
   profile_store!: ProfileStore;
@@ -117,6 +122,21 @@ export default class Injector extends GObject.Object {
     this.injections.add(injection);
     this.has_error = false;
     this.emit('running-prepare', injection.id);
+    await new Promise((resolve) => {
+      const on_running_prepared_change = () => {
+        if (this.running_prepared !== true) return;
+        cleanup();
+        resolve(null);
+      }
+      const using_timeout = setTimeout(on_running_prepared_change, 3000);
+      const using_running_prepared = this.connect('notify::running-prepared', on_running_prepared_change);
+      const cleanup = () => {
+        using_timeout.destroy();
+        this.disconnect(using_running_prepared);
+      };
+      on_running_prepared_change();
+    });
+    this.running_prepared = true;
     this.running = true;
     this.emit('session-start', injection.id);
     try {
@@ -129,24 +149,23 @@ export default class Injector extends GObject.Object {
         }, 3000);
       });
       await this.link(injection);
-      injection.timeEnd();
-      injection.log(`Done in ${injection.elapsed}ms.`);
+      injection.log(`Done.`);
     } catch (error) {
       this.has_error = true;
       logError(error);
-      if (error instanceof GLib.Error) {
-        if (error.matches(Gio.io_error_quark(), Gio.IOErrorEnum.CANCELLED)) {
-          injection.error('Aborted.');
-        } else {
-          injection.error(error.message || 'Unknown error');
-        }
+      if (error instanceof GLib.Error && error.matches(Gio.io_error_quark(), Gio.IOErrorEnum.CANCELLED)) {
+        injection.error('Aborted.');
+      } else if (error instanceof GLib.Error) {
+        injection.error(error.message || 'Unknown error');
       } else if (error instanceof Error) {
         injection.error(error.message || 'Unknown error');
       } else {
         injection.error('Unknown untyped error');
       }
     }
+    injection.timeEnd();
     this.emit('session-end', injection.id);
+    this.running_prepared = false;
     this.running = false;
     this.emit('running-cleanup', injection.id);
   }
