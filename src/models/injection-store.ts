@@ -91,7 +91,7 @@ export class Injection extends GObject.Object {
   }
 
   error(msg: string) {
-    this.logs.append(`<span font-weight=\\\'bold\\\'>${msg}</span>`);
+    this.logs.append(msg);
   }
 
   stop() {
