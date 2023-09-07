@@ -99,7 +99,6 @@ export default function InjectorService(
     },
     Has(id: string) {
       const result = injection_store.get(id) !== undefined;
-      console.log(result);
       return result;
     },
     set RunningPrepared(val: boolean) {
@@ -116,7 +115,6 @@ export default function InjectorService(
     service.emit_signal('SessionStart', GLib.Variant.new_tuple([GLib.Variant.new_string(id)]));
   });
   injector.connect('session-finished', (_obj, id: string) => {
-    console.log('emit', 'session-finished', id);
     service.emit_signal('SessionFinished', GLib.Variant.new_tuple([GLib.Variant.new_string(id)]));
   });
   injector.connect('session-end', (_obj, id: string) => {
@@ -164,7 +162,6 @@ export default function InjectorService(
       for (let i = 0; i < added; i++) {
         const idx = pos + i;
         const val = injection.logs.get_string(idx) || '';
-        console.log('logs-changed', `\"${val}\"`);
         service.emit_signal('LogsChanged',
           GLib.Variant.new_tuple([
             GLib.Variant.new_string(val)
