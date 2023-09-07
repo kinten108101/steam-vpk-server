@@ -1,15 +1,36 @@
+import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import GObject from 'gi://GObject';
 import * as Files from '../file.js';
-import * as Utils from '../steam-vpk-utils/utils.js';
 import AddonStorage from '../models/addon-storage.js';
 
 export default class DiskCapacity extends GObject.Object {
   static {
-    Utils.registerClass({}, this);
+    GObject.registerClass({
+      Properties: {
+        used: GObject.ParamSpec.uint64(
+          'used', 'Used', 'Disk space used by add-on repository',
+          GObject.ParamFlags.READWRITE | GObject.ParamFlags.CONSTRUCT,
+          0, Number.MAX_SAFE_INTEGER,
+          0),
+        fs_free: GObject.ParamSpec.uint64(
+          'fs_free', 'Filesystem Free', 'Free disk space of filesystem of add-on repository',
+          GObject.ParamFlags.READWRITE | GObject.ParamFlags.CONSTRUCT,
+          0, Number.MAX_SAFE_INTEGER,
+          0),
+        fs_size: GObject.ParamSpec.uint64(
+          'fs_size', 'Filesystem Size', 'Total disk capacity of filesystem of add-on repository',
+          GObject.ParamFlags.READWRITE | GObject.ParamFlags.CONSTRUCT,
+          0, Number.MAX_SAFE_INTEGER,
+          0),
+      },
+    }, this);
   };
 
-  used: number | undefined;
+  used!: number;
+  fs_free!: number;
+  fs_size!: number;
+  icon!: Gio.Icon;
   cache: WeakMap<Gio.File, number> = new WeakMap;
 
   bind(
@@ -24,6 +45,24 @@ export default class DiskCapacity extends GObject.Object {
     };
     addon_storage.connect(AddonStorage.Signals.addons_changed, updateUsed);
     updateUsed();
+
+    const info = addon_storage.subdirFolder.query_filesystem_info('*', null);
+    this.fs_free = info.get_attribute_uint64(Gio.FILE_ATTRIBUTE_FILESYSTEM_FREE);
+    this.fs_size = info.get_attribute_uint64(Gio.FILE_ATTRIBUTE_FILESYSTEM_SIZE);
+    console.log('type', info.get_attribute_string(Gio.FILE_ATTRIBUTE_FILESYSTEM_TYPE));
+    setInterval(() => {
+      addon_storage.subdirFolder.query_filesystem_info_async('*', GLib.PRIORITY_DEFAULT, null)
+        .then(info => {
+          const free = info.get_attribute_uint64(Gio.FILE_ATTRIBUTE_FILESYSTEM_FREE);
+          if (free !== this.fs_free) this.fs_free = free;
+
+          const size = info.get_attribute_uint64(Gio.FILE_ATTRIBUTE_FILESYSTEM_SIZE);
+          if (size !== this.fs_size) this.fs_size = size;
+        })
+        .catch(error => logError(error));
+    }, 5000);
+
+
   }
 
   async start() {

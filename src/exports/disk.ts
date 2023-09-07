@@ -16,6 +16,9 @@ export default function DiskService(
   const service = Gio.DBusExportedObject.wrapJSObject(
 `<node>
   <interface name="${interface_name}">
+    <property name="TotalUsage" type="t" access="read" />
+    <property name="FreeSpace" type="t" access="read" />
+    <property name="TotalSpace" type="t" access="read" />
     <method name="GetAddonFolderSize">
       <arg name="id" type="s" direction="in" />
       <arg name="size" type="t" direction="out" />
@@ -23,14 +26,23 @@ export default function DiskService(
     </method>
   </interface>
 </node>`,
-    new class {
+    {
+      get TotalUsage() {
+        return disk_capacity.used;
+      },
+      get FreeSpace() {
+        return disk_capacity.fs_free;
+      },
+      get TotalSpace() {
+        return disk_capacity.fs_size;
+      },
       GetAddonFolderSize(id: string) {
         const addon = addon_storage.get(id);
         if (addon === undefined) return [0, ''];
         const size = disk_capacity.eval_size(addon.subdir);
         const text = bytes2humanreadable(size);
         return [size, text];
-      }
+      },
     });
 
   function export2dbus(connection: Gio.DBusConnection, path: string) {

@@ -95,3 +95,9 @@ Gio._promisify(
   'move_async',
   'move_finish',
 );
+
+Gio._promisify(
+  Gio.File.prototype,
+  'query_filesystem_info_async',
+  'query_filesystem_info_finish'
+);
