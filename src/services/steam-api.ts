@@ -32,6 +32,11 @@ export type PublishedFileDetails = {
   file_url: string;
   consumer_app_id: number;
   creator: string;
+  description: string;
+  time_updated: number;
+  tags: {
+    tag: string;
+  }[];
 };
 
 export type GetPlayerSummariesResponse = {
