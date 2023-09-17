@@ -14,9 +14,6 @@ import { AddonConfiguration } from '../models/profile.js';
 import ProfileStore from '../models/profile-store.js';
 import { Injection } from '../models/injection-store.js';
 
-Gio._promisify(Gio.File.prototype, 'make_symbolic_link_async', 'make_symbolic_link_finish');
-Gio._promisify(Gio.File.prototype, 'delete_async', 'delete_finish');
-
 function throw_cancelled(): never {
   throw new GLib.Error(Gio.io_error_quark(), Gio.IOErrorEnum.CANCELLED, 'Cancelled');
 }

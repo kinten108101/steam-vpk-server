@@ -1,103 +1,82 @@
 import Gio from 'gi://Gio';
 import Soup from 'gi://Soup';
 
-Gio._promisify(
-  Gio.File.prototype,
-  'query_info_async',
-  'query_info_finish',
-);
+const orders: {
+  object: any,
+  methods: string[],
+}[] = [
+  {
+    object: Gio.File.prototype,
+    methods: [
+      'append_to',
+      'copy',
+      'create',
+      'create_readwrite',
+      'delete',
+      'enumerate_children',
+      'find_enclosing_mount',
+      'load_bytes',
+      'load_contents',
+      'make_directory',
+      'make_symbolic_link',
+      'move',
+      'open_readwrite',
+      'query_default_handler',
+      'query_filesystem_info',
+      'query_info',
+      'read',
+      'replace',
+      'replace_contents',
+      'replace_readwrite',
+      'set_attributes',
+      'set_display_name',
+      'trash',
+      'replace_contents',
+    ],
+  },
+  {
+    object: Gio.FileOutputStream.prototype,
+    methods: [
+      'query_info',
+    ],
+  },
+  {
+    object: Soup.Session.prototype,
+    methods: [
+      'preconnect',
+      'send_and_read',
+      'send_and_splice',
+      'send',
+      'websocket_connect',
+    ],
+  },
+  {
+    object: Gio.InputStream.prototype,
+    methods: [
+      'close',
+      'read_all',
+      'read',
+      'read_bytes',
+      'skip',
+    ],
+  },
+  {
+    object: Gio.OutputStream.prototype,
+    methods: [
+      'close',
+      'flush',
+      'splice',
+      'write_all',
+      'write',
+      'write_bytes',
+      'writev_all',
+      'writev',
+    ],
+  },
+];
 
-Gio._promisify(
-  Gio.FileOutputStream.prototype,
-  'query_info_async',
-  'query_info_finish',
-);
-Gio._promisify(
-  Gio.File.prototype,
-  'trash_async',
-  'trash_finish',
-);
-
-Gio._promisify(
-  Soup.Session.prototype,
-  'send_async',
-  'send_finish',
-);
-
-Gio._promisify(
-  Gio.File.prototype,
-  'replace_async',
-  'replace_finish',
-);
-
-Gio._promisify(
-  Gio.InputStream.prototype,
-  'read_all_async',
-  'read_all_finish',
-);
-
-Gio._promisify(
-  Gio.OutputStream.prototype,
-  'write_async',
-  'write_finish',
-);
-
-Gio._promisify(
-  Gio.OutputStream.prototype,
-  'write_bytes_async',
-  'write_bytes_finish',
-);
-
-Gio._promisify(
-  Soup.Session.prototype,
-  'send_and_splice_async',
-  'send_and_splice_finish',
-);
-
-Gio._promisify(
-  Gio.OutputStream.prototype,
-  'flush_async',
-  'flush_finish',
-);
-
-Gio._promisify(
-  Gio.InputStream.prototype,
-  'close_async',
-  'close_finish',
-);
-
-Gio._promisify(
-  Gio.OutputStream.prototype,
-  'close_async',
-  'close_finish',
-);
-
-Gio._promisify(
-  Gio.InputStream.prototype,
-  'read_bytes_async',
-  'read_bytes_finish',
-);
-
-Gio._promisify(
-  Gio.InputStream.prototype,
-  'read_all_async',
-  'read_all_finish',
-);
-
-Gio._promisify(
-  Gio.OutputStream.prototype,
-  'splice_async',
-  'splice_finish',
-);
-
-Gio._promisify(
-  Gio.File.prototype,
-  'move_async',
-  'move_finish',
-);
-
-Gio._promisify(
-  Gio.File.prototype,
-  'query_filesystem_info_async',
-  'query_filesystem_info_finish'
-);
+orders.forEach(({ object, methods }) => {
+  methods.forEach(method => {
+    Gio._promisify(object, `${method}_async`, `${method}_finish`);
+  });
+});

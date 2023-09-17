@@ -6,10 +6,6 @@ import { DefaultEncoder, read_json_bytes } from '../file.js';
 import { OAUTH } from '../const.js';
 import { generateAuthor } from '../id.js';
 
-Gio._promisify(Soup.Session.prototype,
-  'send_and_read_async',
-  'send_and_read_finish');
-
 export function steam_api_error_quark() {
   return GLib.quark_from_string('steam-api-error');
 }

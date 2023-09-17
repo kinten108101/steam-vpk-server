@@ -1,10 +1,6 @@
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 
-Gio._promisify(Gio.File.prototype, 'enumerate_children_async', 'enumerate_children_finish');
-Gio._promisify(Gio.File.prototype, 'replace_contents_async', 'replace_contents_finish');
-Gio._promisify(Gio.File.prototype, 'load_contents_async', 'load_contents_finish');
-
 export const DefaultDecoder = new TextDecoder('utf8');
 export const DefaultEncoder = new TextEncoder();
 
