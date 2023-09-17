@@ -65,6 +65,17 @@ export function make_dir_nonstrict(dir: Gio.File) {
   }
 }
 
+export async function make_dir_nonstrict_async(dir: Gio.File) {
+  try {
+    await dir.make_directory_async(GLib.PRIORITY_DEFAULT, null);
+  } catch (error) {
+    if (error instanceof GLib.Error) {
+      if (error.matches(Gio.io_error_quark(), Gio.IOErrorEnum.EXISTS)) {}
+      else throw error;
+    } else throw error;
+  }
+}
+
 export function read_json(file: Gio.File) {
   const [, bytes,] = file.load_contents(null);
   const serial = DefaultDecoder.decode(bytes);
