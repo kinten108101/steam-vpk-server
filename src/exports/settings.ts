@@ -3,12 +3,6 @@ import Gio from 'gi://Gio';
 import { DBusService, ExportStoreService } from './dbus-service.js';
 import Settings from '../services/settings.js';
 
-/**
- * Experimental writing service for this Gio.Setting namespace.
- *
- * This is ill-advised as write-access is now made public. Perhaps we need
- * an authentication method?
- */
 export default function SettingsService(
 { interface_name,
   settings,
