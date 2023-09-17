@@ -74,7 +74,9 @@ export default class DiskCapacity extends GObject.Object {
     this.cache = new WeakMap;
     const subdirs = Files.list_file(dir);
     this.used = subdirs.map(subdir => {
-      return this.eval_size(subdir);
+      const subdirsize = this.eval_size(subdir);
+      this.cache.set(subdir, subdirsize);
+      return subdirsize;
     }).reduce((acc, size) => acc + size, 0);
   }
 
