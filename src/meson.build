@@ -36,12 +36,10 @@ script = [
   'file.ts',
   'id.ts',
   'index-dir.ts',
-  'inventory.ts',
   'logger.ts',
   'main.ts',
   'promisify.ts',
   'server.ts',
-  'simple-inv.ts',
 ]
 script_files = files(script)
 
