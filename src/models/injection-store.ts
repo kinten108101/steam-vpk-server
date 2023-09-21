@@ -51,6 +51,8 @@ export class Injection extends GObject.Object {
   logs: Gtk.StringList = new Gtk.StringList;
   sources: Gio.ListStore<Gio.File> = new Gio.ListStore({ item_type: Gio.File.$gtype });
   cancellable: Gio.Cancellable = new Gio.Cancellable;
+
+  hooks: Map<string, number> = new Map;
   _using_set_interval: GLib.Source | undefined;
 
   constructor(params: {

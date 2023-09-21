@@ -45,6 +45,10 @@ export default function InjectorService(
       <arg name="injection-id" type="s"/>
     </signal>
     <method name="Run"/>
+    <method name="EnableRunWithGame">
+      <arg name="injection-id" type="s"/>
+      <arg name="state" type="b"/>
+    </method>
     <method name="RunWithGame"/>
     <method name="Cancel">
       <arg name="injection-id" type="s"/>
@@ -65,14 +69,39 @@ export default function InjectorService(
         injector.run(inj);
       })().catch(error => logError(error));
     },
+    EnableRunWithGame(id: string, val: boolean) {
+      const injection = injection_store.get(id);
+      if (injection === undefined) return;
+      if (val) {
+        const game_hook = injector.connect('session-end', (_obj, id) => {
+          injector.disconnect(game_hook);
+          if (id !== injection.id) {
+            return;
+          }
+          injection.log('Starting Left 4 Dead 2...');
+          Gtk.show_uri(null, 'steam://rungameid/550', Gdk.CURRENT_TIME);
+        });
+        const prev_hook = injection.hooks.get('game-hook');
+        if (prev_hook !== undefined) {
+          console.warn('Game Hook has already been made');
+          return;
+        }
+        injection.hooks.set('game-hook', game_hook);
+      } else {
+        const game_hook = injection.hooks.get('game-hook');
+        if (game_hook === undefined) return;
+        injection.disconnect(game_hook);
+        injection.hooks.delete('game-hook');
+      }
+    },
     RunWithGame() {
       (async () => {
         const inj = injector.make_injection();
         const game_hook = injector.connect('session-end', (_obj, id) => {
+          injector.disconnect(game_hook);
           if (id !== inj.id) {
             return;
           }
-          injector.disconnect(game_hook);
           inj.log('Starting Left 4 Dead 2...');
           Gtk.show_uri(null, 'steam://rungameid/550', Gdk.CURRENT_TIME);
         });
