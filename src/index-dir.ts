@@ -1,7 +1,6 @@
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 const Signals = imports.signals;
-import type { SignalMethods } from '@girs/gjs';
 import * as File from './file.js';
 
 export class Subdir {
@@ -32,7 +31,12 @@ export class IndexFile {
   }
 }
 
-export default interface IndexDirectory extends SignalMethods {}
+export default interface IndexDirectory {
+  connect(signal: 'save-ready', callback: () => void): number;
+  emit(signal: 'save-ready'): void;
+  connect(signal: 'subdirs-changed', callback: () => void): number;
+  emit(signal: 'subdirs-changed'): void;
+}
 
 export default class IndexDirectory {
   static {
