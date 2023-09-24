@@ -1,7 +1,5 @@
 project(
 	'steam-vpk-server',
-	version: '0.7.0',
-	meson_version: '>= 0.63.0',
 	license: ['GPL-3.0-or-later'],
 )
 
