@@ -5,17 +5,6 @@ import Soup from 'gi://Soup';
 
 import * as Utils from '../steam-vpk-utils/utils.js';
 
-export class FlattenByteModel extends Array<GLib.Bytes> {
-  flatten() {
-    const merged = new Uint8Array(super.length);
-    let offset = 0;
-    this.forEach(arr => {
-      const jsbytes = arr.get_data() || new Uint8Array;
-      merged.set(jsbytes, offset);
-      offset += jsbytes.length;
-    });
-    return merged;
-  }
 
   get_size() {
     return this.map(gbytes => gbytes.get_data()?.byteLength || 0).reduce((acc, x) => acc + x, 0);
