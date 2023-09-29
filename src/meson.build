@@ -36,7 +36,6 @@ script = [
   'file.ts',
   'id.ts',
   'index-dir.ts',
-  'logger.ts',
   'main.ts',
   'promisify.ts',
   'server.ts',
