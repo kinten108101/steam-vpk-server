@@ -2,54 +2,11 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import Soup from 'gi://Soup';
 import { isNumberString } from '../steam-vpk-utils/utils.js';
-import { DefaultEncoder, read_json_bytes } from '../file.js';
+import { DefaultEncoder, read_json_bytes } from './files.js';
 import { OAUTH } from '../const.js';
-import { generateAuthor } from '../id.js';
-
-export function steam_api_error_quark() {
-  return GLib.quark_from_string('steam-api-error');
-}
-
-export enum SteamApiErrorEnum {
-  IdNotFound,
-  IdNotDecimal,
-  RequestNotSuccessful,
-  NotGameL4d2,
-}
-
-export type GetPublishedFileDetailsResponse = {
-  response: {
-    result: number;
-    resultcount: number;
-    publishedfiledetails: PublishedFileDetails[],
-  }
-};
-
-export type PublishedFileDetails = {
-  title: string;
-  publishedfileid: string;
-  file_size: number;
-  file_url: string;
-  consumer_app_id: number;
-  creator: string;
-  description: string;
-  time_updated: number;
-  tags: {
-    tag: string;
-  }[];
-};
-
-export type GetPlayerSummariesResponse = {
-  response: {
-    players: PlayerSummary[],
-  },
-}
-
-export type PlayerSummary = {
-  personaname: string; // empty will be ''
-  profileurl: string; // empty will be ''
-  realname: string; // empty will be ''
-}
+import { generateAuthor } from './id.js';
+import { GetPublishedFileDetailsResponse, PlayerSummary, PublishedFileDetails } from './schema/steam-api.js';
+import { SteamApiErrorEnum, steam_api_error_quark } from './errors/steam-api.js';
 
 export function make_workshop_item_url(file_id: string) {
   return `https://steamcommunity.com/sharedfiles/filedetails/?id=${file_id}`;
@@ -138,8 +95,8 @@ export default class SteamworkServices {
       return generateAuthor(personaname);
 
     const profileurl = playerDetails['profileurl'];
-    const idIdx = profileurl.indexOf('/id/');
-    const vanityId = profileurl.substring(idIdx + 4, profileurl.length - 1);
+    const idIdx = profileurl?.indexOf('/id/') || -1;
+    const vanityId = profileurl?.substring(idIdx + 4, profileurl?.length - 1) || '';
     if (!(idIdx === -1 || isNumberString(vanityId))) // not vanityid found
       return generateAuthor(vanityId);
 

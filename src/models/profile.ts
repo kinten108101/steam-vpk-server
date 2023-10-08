@@ -2,7 +2,8 @@ import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import Gio from 'gi://Gio';
 import { TYPE_JSOBJECT, param_spec_object, param_spec_string, registerClass } from '../steam-vpk-utils/utils.js';
-import { create_json, read_json, replace_json } from '../file.js';
+import { create_json_async, read_json_async, replace_json_async } from '../services/files.js';
+import { IdentifiableObject } from '../models.js';
 
 export type LoadorderEntries = 'addon';
 
@@ -155,9 +156,8 @@ export default interface Profile {
   emit(signal: 'order-changed', list: string[], change: ChangeDescription): void;
   emit(signal: 'notify', pspec: GObject.ParamSpec): void;
 }
-export default class Profile extends GObject.Object {
+export default class Profile extends IdentifiableObject {
   static [GObject.properties] = {
-    id: param_spec_string({ name: 'id' }),
     name: param_spec_string({ name: 'name' }),
     file: param_spec_object({ name: 'file', objectType: Gio.File.$gtype }),
   };
@@ -174,7 +174,6 @@ export default class Profile extends GObject.Object {
     registerClass({}, this);
   }
 
-  id!: string;
   name?: string;
   file!: Gio.File;
 
@@ -187,7 +186,11 @@ export default class Profile extends GObject.Object {
     file: Gio.File,
   }) {
     super(params);
-    this.connect('order-changed', this.save.bind(this)); // experimental
+    this.connect('order-changed', () => {
+      (async () => {
+        await this.save_async();
+      })().catch(logError);
+    }); // experimental
   }
 
   toSerializable() {
@@ -205,20 +208,26 @@ export default class Profile extends GObject.Object {
     };
   }
 
-  async start() {
+  async start_async() {
     try {
-      create_json(this.toSerializable(), this.file);
+      await create_json_async(this.toSerializable(), this.file);
       console.info(`Created ${this.file.get_path()} for the first time.`);
     } catch (error) {
       if (error instanceof GLib.Error) {
         if (error.matches(Gio.io_error_quark(), Gio.IOErrorEnum.EXISTS)) {}
       } else throw error;
     }
-    this.load();
+    await this.load_async();
   }
 
-  load() {
-    const obj = read_json(this.file);
+  async load_async() {
+    let obj;
+    try {
+      obj = await read_json_async(this.file);
+    } catch (error) {
+      logError(error);
+      return;
+    }
     const addonlist = obj['addonlist'];
     if (!Array.isArray(addonlist) || addonlist === undefined) {
       console.warn(`Loading loadorder-entry \"${this.id}\":`, 'Empty add-on collection in file. Must be resolved manually. Quitting...');
@@ -248,7 +257,6 @@ export default class Profile extends GObject.Object {
       draft_configmap.set(id, config);
     });
     this.loadorder = draft_loadorder;
-    console.log(this.loadorder);
     this.configmap = draft_configmap;
 
     this.emit('order-changed', this.loadorder, { type: 'unknown' });
@@ -322,9 +330,9 @@ export default class Profile extends GObject.Object {
     return true;
   }
 
-  save() {
+  async save_async() {
     try {
-      replace_json(this.toSerializable(), this.file);
+      await replace_json_async(this.toSerializable(), this.file);
     } catch (error) {
       logError(error);
       return;

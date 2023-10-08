@@ -1,8 +1,14 @@
-import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import GObject from 'gi://GObject';
-import * as Files from '../file.js';
-import AddonStorage from '../models/addon-storage.js';
+import * as Files from './files.js';
+
+export default interface DiskCapacity {
+  connect(signal: `cache-changed::${string}`, callback: (obj: this, size: number) => void): number;
+  emit(signal: `cache-changed::${string}`, size: number): void;
+  /** inherit */
+  connect(signal: 'notify', callback: (obj: this, pspec: GObject.ParamSpec) => void): number;
+  emit(signal: 'notify'): void;
+}
 
 export default class DiskCapacity extends GObject.Object {
   static {
@@ -10,80 +16,87 @@ export default class DiskCapacity extends GObject.Object {
       Properties: {
         used: GObject.ParamSpec.uint64(
           'used', 'Used', 'Disk space used by add-on repository',
-          GObject.ParamFlags.READWRITE | GObject.ParamFlags.CONSTRUCT,
+          GObject.ParamFlags.READABLE,
           0, Number.MAX_SAFE_INTEGER,
           0),
         fs_free: GObject.ParamSpec.uint64(
-          'fs_free', 'Filesystem Free', 'Free disk space of filesystem of add-on repository',
-          GObject.ParamFlags.READWRITE | GObject.ParamFlags.CONSTRUCT,
+          'fs-free', 'Filesystem Free', 'Free disk space of filesystem of add-on repository',
+          GObject.ParamFlags.READABLE,
           0, Number.MAX_SAFE_INTEGER,
           0),
         fs_size: GObject.ParamSpec.uint64(
-          'fs_size', 'Filesystem Size', 'Total disk capacity of filesystem of add-on repository',
-          GObject.ParamFlags.READWRITE | GObject.ParamFlags.CONSTRUCT,
+          'fs-size', 'Filesystem Size', 'Total disk capacity of filesystem of add-on repository',
+          GObject.ParamFlags.READABLE,
           0, Number.MAX_SAFE_INTEGER,
           0),
+      },
+      Signals: {
+        'cache-changed': {
+          param_types: [GObject.TYPE_UINT64],
+          flags: GObject.SignalFlags.DETAILED,
+        },
       },
     }, this);
   };
 
-  used!: number;
-  fs_free!: number;
-  fs_size!: number;
-  icon!: Gio.Icon;
+  _used!: number;
+  get used() {
+    return this._used;
+  }
+  _set_used(val: number) {
+    this._used = val;
+    this.notify('used');
+  }
+  _fs_free!: number;
+  get fs_free() {
+    return this._fs_free;
+  }
+  _set_fs_free(val: number) {
+    this._fs_free = val;
+    this.notify('fs-free');
+  }
+  _fs_size!: number;
+  get fs_size() {
+    return this._fs_size;
+  }
+  _set_fs_size(val: number) {
+    this._fs_size = val;
+    this.notify('fs-size');
+  }
+
   cache: WeakMap<Gio.File, number> = new WeakMap;
+  _dir!: Gio.File;
 
-  bind(
-  {
-    addon_storage,
-  }:
-  {
-    addon_storage: AddonStorage;
+  constructor(params: {
+    dir: Gio.File;
   }) {
-    const updateUsed = () => {
-      this.eval_addon_dir(addon_storage.subdirFolder);
-    };
-    addon_storage.connect(AddonStorage.Signals.addons_changed, updateUsed);
-    updateUsed();
-
-    const info = addon_storage.subdirFolder.query_filesystem_info('*', null);
-    this.fs_free = info.get_attribute_uint64(Gio.FILE_ATTRIBUTE_FILESYSTEM_FREE);
-    this.fs_size = info.get_attribute_uint64(Gio.FILE_ATTRIBUTE_FILESYSTEM_SIZE);
-    console.log('type', info.get_attribute_string(Gio.FILE_ATTRIBUTE_FILESYSTEM_TYPE));
-    setInterval(() => {
-      addon_storage.subdirFolder.query_filesystem_info_async('*', GLib.PRIORITY_DEFAULT, null)
-        .then(info => {
-          const free = info.get_attribute_uint64(Gio.FILE_ATTRIBUTE_FILESYSTEM_FREE);
-          if (free !== this.fs_free) this.fs_free = free;
-
-          const size = info.get_attribute_uint64(Gio.FILE_ATTRIBUTE_FILESYSTEM_SIZE);
-          if (size !== this.fs_size) this.fs_size = size;
-        })
-        .catch(error => logError(error));
-    }, 5000);
-
-
+    super({});
+    this._dir = params.dir;
   }
 
-  async start() {
-
-  }
-
-  eval_addon_dir(dir: Gio.File) {
+  eval_addon_dir() {
     // TODO(kinten): Memoize using last modified?
     this.cache = new WeakMap;
-    const subdirs = Files.list_file(dir);
-    this.used = subdirs.map(subdir => {
+    const subdirs = Files.list_file(this._dir);
+    const used = subdirs.map(subdir => {
       const subdirsize = this.eval_size(subdir);
       this.cache.set(subdir, subdirsize);
+      this.emit(`cache-changed::${subdir.get_relative_path(this._dir)}`, subdirsize);
       return subdirsize;
     }).reduce((acc, size) => acc + size, 0);
+    this._set_used(used);
   }
 
   eval_size(subdir: Gio.File): number {
     const cache = this.cache.get(subdir);
     if (cache !== undefined) return cache;
-    const files = Files.list_file(subdir);
+    let files: Gio.File[] = [];
+    try {
+      files = Files.list_file(subdir);
+    } catch (error) {
+      logError(error);
+      return 0;
+    }
     const size = files.map(file => {
       const info = file.query_info(Gio.FILE_ATTRIBUTE_STANDARD_SIZE, Gio.FileQueryInfoFlags.NONE, null);
       return info.get_size();

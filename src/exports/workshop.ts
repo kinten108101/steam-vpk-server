@@ -3,15 +3,18 @@ import Gio from 'gi://Gio';
 import { DBusService, ExportStoreService } from './dbus-service.js';
 import SteamworkServices, { make_workshop_item_url } from '../services/steam-api.js';
 import { RequestApi } from './requestapi.js';
+import ApiCache from '../models/api-cache.js';
 
 export default function WorkshopService(
 { interface_name,
   steamapi,
   requestapi,
+  apicache,
 }:
 { interface_name: string;
   steamapi: SteamworkServices;
   requestapi: RequestApi;
+  apicache: ApiCache;
 }): DBusService {
   const service = Gio.DBusExportedObject.wrapJSObject(
 `<node>
@@ -35,9 +38,13 @@ export default function WorkshopService(
       (async () => {
         const id = steamapi.getWorkshopItemId(url);
         const data = await steamapi.getPublishedFileDetails(id);
+        const response_handle = apicache.add(data);
         requestapi.respond(client, 'GetPublishedFileDetails', {
           status: 0,
-          data,
+          data: {
+            response_handle,
+            ...data,
+          },
         });
       })().catch(error => {
         requestapi.respond(client, 'GetPublishedFileDetails', {

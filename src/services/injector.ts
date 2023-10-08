@@ -1,18 +1,17 @@
 import GObject from 'gi://GObject';
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
-import AddonStorage from '../models/addon-storage.js';
 import {
-  g_model_foreach,
   param_spec_boolean,
   param_spec_object,
 } from '../steam-vpk-utils/utils.js';
-import { Archive } from './archiver.js';
-import { list_file_async } from '../file.js';
+import { list_file_async } from './files.js';
 import Settings from './settings.js';
 import { AddonConfiguration } from '../models/profile.js';
 import ProfileStore from '../models/profile-store.js';
-import { Injection } from '../models/injection-store.js';
+import { Injection } from './injection.js';
+import AddonStore from '../models/addon-store.js';
+import ArchiveStore from '../models/archive-store.js';
 
 function throw_cancelled(): never {
   throw new GLib.Error(Gio.io_error_quark(), Gio.IOErrorEnum.CANCELLED, 'Cancelled');
@@ -75,20 +74,26 @@ export default class Injector extends GObject.Object {
   running!: boolean;
   linkdir: Gio.File | undefined;
 
-  addon_storage!: AddonStorage;
-  profile_store!: ProfileStore;
   injections: WeakSet<Injection> = new WeakSet;
 
-  bind(
-  { addon_storage,
+  addon_store: AddonStore;
+  archive_store: ArchiveStore;
+  profile_store: ProfileStore;
+
+  constructor(
+  { addon_store,
+    archive_store,
     profile_store,
     settings
   }:
-  { addon_storage: AddonStorage;
+  { addon_store: AddonStore;
+    archive_store: ArchiveStore;
     profile_store: ProfileStore;
     settings: Settings;
   }) {
-    this.addon_storage = addon_storage;
+    super({});
+    this.addon_store = addon_store;
+    this.archive_store = archive_store;
     this.profile_store = profile_store;
     settings.bind_property_full('game-dir', this, 'linkdir', GObject.BindingFlags.SYNC_CREATE,
       (_binding, from: Gio.File | null) => {
@@ -189,7 +194,7 @@ export default class Injector extends GObject.Object {
     injection.log('Reading loadorder...');
     injection.target.loadorder.forEach(x => {
       if (injection.cancellable.is_cancelled()) throw_cancelled();
-      const addon = this.addon_storage.idmap.get(x);
+      const addon = this.addon_store.get(x);
       if (addon === undefined) {
         return;
       }
@@ -203,12 +208,14 @@ export default class Injector extends GObject.Object {
       if (!config.active) {
         return;
       }
-      const archive_group = addon.archive_group;
-      if (!archive_group) {
+      const archives = addon.archives;
+      if (archives === null) {
         return;
       }
-      g_model_foreach(archive_group.archives, (item: Archive) => {
-        injection.sources.append(item.file);
+      archives.forEach(x => {
+        const archive = this.archive_store.get(x);
+        if (archive === undefined) return;
+        injection.sources.append(archive.file);
       });
     });
   }

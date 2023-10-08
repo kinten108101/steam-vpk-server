@@ -1,15 +1,16 @@
 import Gio from 'gi://Gio';
 import Gtk from 'gi://Gtk';
-import { registerClass } from '../steam-vpk-utils/utils.js';
 import Profile from './profile.js';
+import { registerClass } from '../steam-vpk-utils/utils.js';
+import { SignalStore } from '../models.js';
 
-
-export default class ProfileStore extends Gio.ListStore {
+export default class ProfileStore extends SignalStore<Profile> {
   static {
     registerClass({}, this);
   }
 
   custom_profiles!: Gio.ListModel;
+  default_profile_path: Gio.File;
 
   constructor(params: {
     default_profile_path: Gio.File,
@@ -17,9 +18,10 @@ export default class ProfileStore extends Gio.ListStore {
     super({ item_type: Profile.$gtype });
     this.connect('notify::n-items', this._update_custom_profiles_model.bind(this));
     this._update_custom_profiles_model();
+    this.default_profile_path = params.default_profile_path;
     const default_profile = new Profile({
-      id: 'no id',
-      file: params.default_profile_path,
+      id: 'default',
+      file: this.default_profile_path,
     });
     this.append(default_profile);
   }
@@ -37,7 +39,7 @@ export default class ProfileStore extends Gio.ListStore {
 
   }
 
-  async start() {
-    await this.default_profile?.start();
+  async start_async() {
+    await this.default_profile?.start_async();
   }
 }

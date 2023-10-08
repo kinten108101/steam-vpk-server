@@ -3,20 +3,22 @@ import Gio from 'gi://Gio';
 import GObject from 'gi://GObject';
 import Soup from 'gi://Soup';
 
-import * as Utils from '../steam-vpk-utils/utils.js';
+import { IdentifiableObject } from '../models.js';
 
+export default interface DownloadOrder {
+  connect(signal: 'completed', callback: (obj: this) => void): number;
+  emit(signal: 'completed'): void;
 
-  get_size() {
-    return this.map(gbytes => gbytes.get_data()?.byteLength || 0).reduce((acc, x) => acc + x, 0);
-  }
+  // inherit
+  connect(signal: 'notify', callback: (obj: this, pspec: GObject.ParamSpec) => void): number;
+  emit(signal: 'notify'): void;
 }
 
-export default class DownloadOrder extends GObject.Object {
+export default class DownloadOrder extends IdentifiableObject {
   static {
-    Utils.registerClass({
+    GObject.registerClass({
+      GTypeName: 'StvpkDownloadOrder',
       Signals: {
-        'stopped': {},
-        'started': { param_types: [GObject.TYPE_STRING] },
         'completed': {},
       }
     }, this);
@@ -37,14 +39,27 @@ export default class DownloadOrder extends GObject.Object {
   monitor: Gio.FileMonitor | undefined;
   monitor_cancellable: Gio.Cancellable | undefined;
 
-  constructor(params: { uri: GLib.Uri, size?: number, saved_location: Gio.File, session: Soup.Session }) {
-    super({});
-    this.msg = new Soup.Message({ method: 'GET', uri: params.uri });
-    this.size = params.size;
+  constructor(
+  { uri,
+    size,
+    saved_location,
+    session,
+  }:
+  { uri: GLib.Uri;
+    size?: number;
+    saved_location: Gio.File;
+    session: Soup.Session;
+  }) {
+    const key = String(uri.to_string()) + String(saved_location.get_path());
+    super({
+      id: key,
+    });
+    this.msg = new Soup.Message({ method: 'GET', uri });
+    this.size = size;
     this.bytesread = 0;
     this.cancellable = new Gio.Cancellable();
-    this.saved_location = params.saved_location;
-    this.session = params.session;
+    this.saved_location = saved_location;
+    this.session = session;
     this.gbytes = [];
   }
 

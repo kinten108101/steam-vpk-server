@@ -1,17 +1,18 @@
 import Gio from 'gi://Gio';
 import { DBusService, ExportStoreService } from './dbus-service.js';
 import DiskCapacity from '../services/disk-capacity.js';
-import AddonStorage from '../models/addon-storage.js';
 import { bytes2humanreadable } from '../steam-vpk-utils/files.js';
+import { MappedStore } from '../models.js';
+import { Addon } from '../models/addons.js';
 
 export default function DiskService(
 { interface_name,
   disk_capacity,
-  addon_storage,
+  addon_store,
 }:
 { interface_name: string;
   disk_capacity: DiskCapacity;
-  addon_storage: AddonStorage;
+  addon_store: MappedStore<Addon>;
 }): DBusService {
   const service = Gio.DBusExportedObject.wrapJSObject(
 `<node>
@@ -37,9 +38,9 @@ export default function DiskService(
         return disk_capacity.fs_size;
       },
       GetAddonFolderSize(id: string) {
-        const addon = addon_storage.get(id);
+        const addon = addon_store.get(id);
         if (addon === undefined) return [0, ''];
-        const size = disk_capacity.eval_size(addon.subdir);
+        const size = addon.size;
         const text = bytes2humanreadable(size);
         return [size, text];
       },

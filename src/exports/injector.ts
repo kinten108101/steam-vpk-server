@@ -4,10 +4,11 @@ import Gtk from 'gi://Gtk';
 import Gdk from 'gi://Gdk';
 
 import { ExportStoreService } from './dbus-service.js';
-import InjectionStore, { Injection } from '../models/injection-store.js';
+import InjectionStore from '../models/injection-store.js';
 import Injector from '../services/injector.js';
 import { SERVER_ID, SERVER_PATH } from '../const.js';
 import { get_formatted_unique_name_str } from '../steam-vpk-utils/portals.js';
+import { Injection } from '../services/injection.js';
 
 export default function InjectorService(
 { connection,
@@ -65,7 +66,7 @@ export default function InjectorService(
     Run() {
       (async () => {
         const inj = injector.make_injection();
-        injection_store.splice(injection_store.get_n_items(), 0, [inj]);
+        injection_store.append(inj);
         injector.run(inj);
       })().catch(error => logError(error));
     },
