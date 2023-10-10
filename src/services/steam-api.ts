@@ -3,10 +3,10 @@ import Gio from 'gi://Gio';
 import Soup from 'gi://Soup';
 import { isNumberString } from '../steam-vpk-utils/utils.js';
 import { DefaultEncoder, read_json_bytes } from './files.js';
-import { OAUTH } from '../const.js';
 import { generateAuthor } from './id.js';
 import { GetPublishedFileDetailsResponse, PlayerSummary, PublishedFileDetails } from './schema/steam-api.js';
 import { SteamApiErrorEnum, steam_api_error_quark } from './errors/steam-api.js';
+import { WEBAPI } from '../const.js';
 
 export function make_workshop_item_url(file_id: string) {
   return `https://steamcommunity.com/sharedfiles/filedetails/?id=${file_id}`;
@@ -55,8 +55,7 @@ export default class SteamworkServices {
   }
 
   async getPlayerSummary(user_id: string): Promise<PlayerSummary> {
-    const webapi = OAUTH;
-    const uri = GLib.Uri.parse(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?access_token=${webapi}&steamids=${user_id}&key=`, GLib.UriFlags.NONE);
+    const uri = GLib.Uri.parse(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${WEBAPI}&steamids=${user_id}`, GLib.UriFlags.NONE);
 
     const msg = new Soup.Message({
       method: 'GET',
