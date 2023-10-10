@@ -4,7 +4,7 @@ import Soup from 'gi://Soup';
 import { isNumberString } from '../steam-vpk-utils/utils.js';
 import { DefaultEncoder, read_json_bytes } from './files.js';
 import { generateAuthor } from './id.js';
-import { GetPublishedFileDetailsResponse, PlayerSummary, PublishedFileDetails } from './schema/steam-api.js';
+import { GetPlayerSummariesResponse, GetPublishedFileDetailsResponse, PlayerSummary, PublishedFileDetails } from './schema/steam-api.js';
 import { SteamApiErrorEnum, steam_api_error_quark } from './errors/steam-api.js';
 import { WEBAPI } from '../const.js';
 
@@ -64,9 +64,17 @@ export default class SteamworkServices {
 
     const gbytes = await this.session.send_and_read_async(msg, GLib.PRIORITY_DEFAULT, null);
     const bytes = gbytes.get_data();
-    if (bytes === null) throw new Error('Response is empty');
-    const response = read_json_bytes(bytes);
-    return response.players[0];
+    if (msg.status_code !== 200) {
+      throw new GLib.Error(
+        steam_api_error_quark(),
+        SteamApiErrorEnum.RequestNotSuccessful,
+        `Request was not successful. Received a response status code of \"${msg.status_code}\"`);
+    }
+    if (bytes === null) throw new Error;
+    const response: GetPlayerSummariesResponse = read_json_bytes(bytes);
+    const summary: PlayerSummary | undefined = response.response?.players?.[0];
+    if (summary === undefined) throw new Error;
+    return summary;
   }
 
   getWorkshopItemId(url: string): string {
