@@ -79,6 +79,7 @@ export default function InjectorService(
           if (id !== injection.id) {
             return;
           }
+          if (injector.has_error) return;
           injection.log('Starting Left 4 Dead 2...');
           Gtk.show_uri(null, 'steam://rungameid/550', Gdk.CURRENT_TIME);
         });
