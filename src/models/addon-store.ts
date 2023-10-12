@@ -38,6 +38,12 @@ export default class AddonStore extends SignalStore<Addon> {
     });
   }
 
+  append(item: Addon): boolean {
+    if (this._id_map.has(item.id)) return false;
+    super.append(item);
+    return true;
+  }
+
   request_fill() {
     this.emit('request-fill');
   }

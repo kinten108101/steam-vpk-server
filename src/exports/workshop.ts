@@ -37,13 +37,28 @@ export default function WorkshopService(
     GetPublishedFileDetails(client: string, url: string) {
       (async () => {
         const id = steamapi.getWorkshopItemId(url);
-        const data = await steamapi.getPublishedFileDetails(id);
-        const response_handle = apicache.add(data);
+        const gpfd_data = await steamapi.getPublishedFileDetails(id);
+        console.debug('gpfd:', gpfd_data);
+        const gpfd_handle = apicache.add(gpfd_data);
+        const gpfd = {
+          _handle: gpfd_handle,
+          ...gpfd_data,
+        };
+        let gps = undefined;
+        if (gpfd_data.creator) {
+          const gps_data = await steamapi.getPlayerSummary(gpfd_data.creator);
+          console.debug('gps:', gps_data);
+          const gps_handle = apicache.add(gps_data);
+          gps = {
+            _handle: gps_handle,
+            ...gps_data,
+          };
+        }
         requestapi.respond(client, 'GetPublishedFileDetails', {
           status: 0,
           data: {
-            response_handle,
-            ...data,
+            gpfd,
+            gps,
           },
         });
       })().catch(error => {

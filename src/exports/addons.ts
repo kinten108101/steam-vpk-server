@@ -13,6 +13,9 @@ import { PublishedFileDetails } from '../services/schema/steam-api.js';
 import ArchiveStore from '../models/archive-store.js';
 import { Archive } from '../models/archives.js';
 import { SERVER_ID } from '../const.js';
+import { AddonStoreErrorEnum, addon_store_error_quark } from '../services/errors/addon-store.js';
+import { create_id_from_workshop } from '../services/id/workshop.js';
+import { IdErrorEnum, id_error_quark } from '../services/errors/id.js';
 
 export default function AddonsService(
 { interface_name,
@@ -64,6 +67,7 @@ export default function AddonsService(
     <method name="CreateFromWorkshop">
       <arg name="client" type="s" direction="in" />
       <arg name="workshop-response-handle" type="s" direction="in" />
+      <arg name="workshop-response-handle_2" type="s" direction="in" />
       <arg name="overrides" type="a{sv}" direction="in" />
     </method>
     <method name="Delete">
@@ -99,23 +103,57 @@ export default function AddonsService(
       if (archives.length <= 0) return false;
       return true;
     },
-    CreateFromWorkshop(client: string, workshop_response_handle: string, _overrides: any) {
+    CreateFromWorkshop(client: string, gpfd_handle: string, gps_handle: string, _overrides: any) {
       (async () => {
-        const response = apicache.get(workshop_response_handle);
-        if (response === undefined) throw new Error;
-        const addon = gpfd2addon().deserialize(response.content, {});
+        const gpfd_response = apicache.get(gpfd_handle);
+        if (gpfd_response === undefined) {
+          throw new Error;
+        }
+        const gps_response = apicache.get(gps_handle);
+        if (gps_response === undefined) {
+          throw new Error;
+        }
+        const id = create_id_from_workshop(gpfd_response.content, gps_response.content);
+        if (id === undefined) {
+          throw new GLib.Error(
+            id_error_quark(),
+            IdErrorEnum.FAILED,
+            `Cannot extract id for addon`);
+        }
+        console.log('id:', id);
+        if (addon_store._id_map.has(id)) throw new Error("wtf");
+        const addon = gpfd2addon().deserialize(gpfd_response.content, { id });
         if (addon === undefined) throw new Error;
-        addon_store.append(addon);
-        const archives = gpfd2archives().deserialize(response.content, { id: addon.id });
+
+        const stat_append = addon_store.append(addon);
+        if (!stat_append) {
+          throw new GLib.Error(
+            addon_store_error_quark(),
+            AddonStoreErrorEnum.EXISTS,
+            `ID \"${addon.id}\" already exists`);
+        }
+        const archives = gpfd2archives().deserialize(gpfd_response.content, { id: addon.id });
         if (archives === undefined) throw new Error;
         archive_store.splice(archive_store.get_n_items(), 0, archives);
         requestapi.respond(client, 'CreateFromWorkshop', {
           status: 0,
         });
-      })().catch(_error => {
-        logError(_error);
+      })().catch(error => {
+        logError(error);
+        const domain: string | undefined = (() => {
+          if (error instanceof GLib.Error) return GLib.quark_to_string(error.domain) || undefined;
+          return undefined;
+        })();
+        const code: number | undefined = (() => {
+          if (error instanceof GLib.Error) return error.code;
+          return undefined;
+        })();
         requestapi.respond(client, 'CreateFromWorkshop', {
           status: 1,
+          data: {
+            domain,
+            code,
+          },
         });
       });
     },

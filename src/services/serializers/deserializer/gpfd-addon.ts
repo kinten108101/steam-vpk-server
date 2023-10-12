@@ -23,10 +23,10 @@ export default class GPFD2Addon implements Deserializer<PublishedFileDetails, Ad
     this._addon_backend = params.addon_backend;
   }
 
-  deserialize(response: PublishedFileDetails, overrides: { id?: string }): Addon {
+  deserialize(response: PublishedFileDetails, overrides?: { id?: string }): Addon | undefined {
+    if (overrides === undefined) return undefined;
     let id = overrides.id;
-    if (id === undefined)
-      id = 'sampleid@' + Math.round(Math.random()*100000);
+    if (id === undefined) return undefined;
     const item = new Addon({
       id,
       steam_id: String(response.publishedfileid),

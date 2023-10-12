@@ -6,3 +6,7 @@ import GLib from 'gi://GLib';
 export function addon_store_error_quark() {
   return GLib.quark_from_string('addon-store-error');
 }
+
+export enum AddonStoreErrorEnum {
+  EXISTS = 1,
+}
