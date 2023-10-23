@@ -15,3 +15,6 @@
 # yarn
 /yarn-error.log
 
+# tests
+/test/sandbox
+/test/tsc_out

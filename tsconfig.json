@@ -32,6 +32,8 @@
     "node_modules/@girs/gjs/gjs.d.ts",
     "node_modules/@girs/gjs/dom.d.ts",
     "src/index.js",
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "test/src/**/*.js",
+    "test/src/**/*.ts"
   ]
 }
