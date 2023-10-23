@@ -134,22 +134,32 @@ export function random_name(): string {
   return Math.random().toString(36).replace('.', '');
 }
 
+let count_pass = 0;
+let count_total = 0;
+
 export async function run(name: string, fn: () => Promise<number>) {
-  print(`Test \"${name}\"`);
+  count_total++;
   let status;
   let error_obj: Error | GLib.Error | undefined;
+  const time_start = new Date;
   try {
     status = await fn();
   } catch (error) {
     error_obj = error as Error | GLib.Error;
   }
+  const time_end = new Date;
+  const elapsed = Number(time_end) - Number(time_start);
   if (status === 0) {
-    print(`${_sgr(Color.bold)}${_sgr(Color.lightGreen)}PASS${_sgr(Color.reset)}`);
+    print(`${name} ${elapsed}ms ${_sgr(Color.bold)}${_sgr(Color.lightGreen)}PASS${_sgr(Color.reset)}`);
+    count_pass++;
   } else if (error_obj) {
-    print(`${_sgr(Color.bold)}${_sgr(Color.red)}FAILED${_sgr(Color.reset)} Exception thrown`);
+    print(`${name} ${elapsed}ms ${_sgr(Color.bold)}${_sgr(Color.red)}FAILED${_sgr(Color.reset)} Exception thrown`);
     print(error_obj?.message);
   } else {
-    print(`${_sgr(Color.bold)}${_sgr(Color.red)}FAILED${_sgr(Color.reset)}`);
+    print(`${name} ${elapsed}ms ${_sgr(Color.bold)}${_sgr(Color.red)}FAILED${_sgr(Color.reset)}`);
   }
-  print('');
+}
+
+export function summarize() {
+  print(`${count_pass}/${count_total}`);
 }
