@@ -80,5 +80,8 @@ export async function DiskCapacityIntervalTest(): Promise<number> {
   const newval = disk_capacity._fs_free;
   if (oldval === newval) return 1;
   recursiveDeleteCallback(Gio.File.new_for_uri(`${(import.meta as any).url}../../../../../../sandbox/share/addons`), Gio.FileType.DIRECTORY, null).catch(logError);
+  await timeout_async(5000);
+  const newwval = disk_capacity._fs_free;
+  if (newval !== newwval) return 1;
   return 0;
 }
