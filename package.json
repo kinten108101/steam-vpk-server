@@ -6,7 +6,8 @@
     "meson:run": "com.github.kinten108101.SteamVPK.Server",
     "flatpak:install": "rm -rf build-flatpak && flatpak run org.flatpak.Builder --force-clean --user --install build-flatpak build-aux/com.github.kinten108101.SteamVPK.Server.yml",
     "flatpak:run": "flatpak run com.github.kinten108101.SteamVPK.Server",
-    "test": "yarn run tsc --outDir test/tsc_out && gjs -m test/index.js"
+    "test:build": "yarn run tsc --outDir test/tsc_out",
+    "test:run": "gjs -m test/index.js"
   },
   "dependencies": {
     "@girs/gtk-4.0": "^4.10.4-3.1.0",
