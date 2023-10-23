@@ -6,6 +6,13 @@ const orders: {
   methods: string[],
 }[] = [
   {
+    object: Gio.FileEnumerator.prototype,
+    methods: [
+      'close',
+      'next_files',
+    ],
+  },
+  {
     object: Gio.File.prototype,
     methods: [
       'append_to',
