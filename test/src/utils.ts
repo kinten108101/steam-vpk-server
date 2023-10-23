@@ -17,8 +17,13 @@ enum Color {
   lightMagenta = 95,
 };
 
+let color: boolean = true;
+
 function _sgr(param: number) {
-  return `\x1b[${param}m`
+  if (color)
+    return `\x1b[${param}m`;
+  else
+    return '';
 }
 
 export function make_dir_nonstrict(dir: Gio.File) {
@@ -128,6 +133,12 @@ async function recursiveFileOperation(file: Gio.File, callback: Function, cancel
 
     // Return the Promise for the top-level file
     return callback(file, cancellable);
+}
+
+export function parse_argv(argv: string[]) {
+  if (argv.includes('--nocolor')) {
+    color = false;
+  }
 }
 
 export function random_name(): string {
