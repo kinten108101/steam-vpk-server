@@ -4,6 +4,7 @@ import DiskCapacity from "../../../src/services/disk-capacity.js";
 import DiskCapacityBinder from '../../../src/binders/disk-capacity.js';
 import { IdentifiableObject, SignalStore } from '../../../src/models.js';
 import {
+  TestEnv,
   make_dir_nonstrict,
   random_name,
   recursiveDeleteCallback,
@@ -60,9 +61,9 @@ export default class AddonStore extends SignalStore<Addon> {
   }
 }
 
-export async function DiskCapacityIntervalTest(): Promise<number> {
+export async function DiskCapacityIntervalTest(env: TestEnv): Promise<number> {
   const addon_store = new AddonStore;
-  const dir = Gio.File.new_for_uri(`${(import.meta as any).url}../../../../../../sandbox/share/addons`);
+  const dir = env.addons_dir;
   const disk_capacity = new DiskCapacity({
     dir,
   });
@@ -72,14 +73,14 @@ export async function DiskCapacityIntervalTest(): Promise<number> {
     addon_store,
   });
   const oldval = disk_capacity._fs_free;
-  const examplemod_folder = Gio.File.new_for_uri(`${(import.meta as any).url}../../../../../../sandbox/share/addons/example_mod`);
+  const examplemod_folder = env.addons_dir.get_child('example_mod')
   make_dir_nonstrict(examplemod_folder);
   const examplemod_file = examplemod_folder.get_child('info.txt');
   replace_json({ name: 'examplemod' }, examplemod_file);
   await timeout_async(5000);
   const newval = disk_capacity._fs_free;
   if (oldval === newval) return 1;
-  recursiveDeleteCallback(Gio.File.new_for_uri(`${(import.meta as any).url}../../../../../../sandbox/share/addons`), Gio.FileType.DIRECTORY, null).catch(logError);
+  recursiveDeleteCallback(dir, Gio.FileType.DIRECTORY, null).catch(logError);
   await timeout_async(5000);
   const newwval = disk_capacity._fs_free;
   if (newval !== newwval) return 1;

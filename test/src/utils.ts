@@ -145,16 +145,24 @@ export function random_name(): string {
   return Math.random().toString(36).replace('.', '');
 }
 
+export type TestEnv = {
+  addons_dir: Gio.File;
+};
+
+let env: TestEnv = {
+  addons_dir: Gio.File.new_for_uri(`${(import.meta as any).url}/../../../../sandbox/share/addons`),
+};
+
 let count_pass = 0;
 let count_total = 0;
 
-export async function run(name: string, fn: () => Promise<number>) {
+export async function run(name: string, fn: (env: TestEnv) => Promise<number>) {
   count_total++;
   let status;
   let error_obj: Error | GLib.Error | undefined;
   const time_start = new Date;
   try {
-    status = await fn();
+    status = await fn(env);
   } catch (error) {
     error_obj = error as Error | GLib.Error;
   }
