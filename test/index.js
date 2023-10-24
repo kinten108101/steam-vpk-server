@@ -8,8 +8,7 @@ imports.package.init({
 });
 
 const getMain = new GLib.MainLoop(null, false);
-// @ts-ignore
-import('file:///home/kinten/Projects/steam-vpk-server/test/tsc_out/test/src/main.js')
+import(`${import.meta.url}/../tsc_out/test/src/main.js`)
   .then(mod => {
     GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
       getMain.quit();
