@@ -1,8 +1,7 @@
 import GLib from 'gi://GLib';
 
 imports.package.init({
-  name: 'com.github.kinten108101.SteamVPK.Server',
-  version: '0.1',
+  name: 'test',
   prefix: '/usr',
   libdir: '/usr/lib',
 });
