@@ -187,15 +187,6 @@ export default function AddonsService(
     },
   });
 
-  /*
-  addon_storage.connect(AddonStorage.Signals.addons_changed, () => {
-    const arg = GLib.Variant.new_tuple([addon_storage.idmap2gvariant()]);
-    service.emit_signal('AddonsChanged',      arg);
-    // is dbus signal emission blocking?
-    service.emit_signal('AddonsChangedAfter', arg);
-  });
-  */
-
   addon_store.connect('bind', (_obj, item: Addon) => {
     item.connect('notify::size', () => {
       const states: [string, GLib.Variant][] = [];
