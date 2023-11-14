@@ -92,7 +92,6 @@ export default function AddonDirectoryBinder(
 
   store.connect('bind', (_obj, item) => {
     if (bind_signals_disable_requests > 0) return;
-    console.log('save item');
 
     directory.save_single_item(
       item.id,
